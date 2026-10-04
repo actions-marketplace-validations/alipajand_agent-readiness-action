@@ -54972,6 +54972,13 @@ function formatMarkdownComment(result, comparison) {
     return lines.join('\n');
 }
 const CONTEXT_ISSUE_LIMIT = 8;
+// Repository-wide issues carry the audited path as their file, which in CI is the
+// runner's checkout directory, so they are shown as "(repository)" instead.
+function contextIssueLocation(result, issue) {
+    if (issue.file === result.repoPath)
+        return '(repository)';
+    return issue.line ? `${issue.file}:${issue.line}` : issue.file;
+}
 /** Log lines for the agent-context-doctor audit. */
 function formatContextLog(result) {
     const { score, summary } = result;
@@ -54979,8 +54986,7 @@ function formatContextLog(result) {
         `Agent context quality: ${score.total}/${score.max} (${score.grade}) — ${summary.high} high, ${summary.medium} medium, ${summary.low} low`,
     ];
     for (const issue of issuesBySeverity(result)) {
-        const loc = issue.line ? `:${issue.line}` : '';
-        lines.push(`  [${issue.severity}] ${safeText(issue.file)}${loc} — ${safeText(issue.message)}`);
+        lines.push(`  [${issue.severity}] ${safeText(contextIssueLocation(result, issue))} — ${safeText(issue.message)}`);
     }
     return lines.join('\n');
 }
@@ -54997,9 +55003,7 @@ function formatContextSection(result) {
         lines.push('| Severity | File | Issue |');
         lines.push('|----------|------|-------|');
         for (const issue of issues.slice(0, CONTEXT_ISSUE_LIMIT)) {
-            const loc = issue.line ? `:${issue.line}` : '';
-            const file = issue.file === result.repoPath ? '(repository)' : `${issue.file}${loc}`;
-            lines.push(`| ${issue.severity} | ${tableCodeSpan(file)} | ${formatSummary_escapeMarkdown(issue.message)} |`);
+            lines.push(`| ${issue.severity} | ${tableCodeSpan(contextIssueLocation(result, issue))} | ${formatSummary_escapeMarkdown(issue.message)} |`);
         }
         if (issues.length > CONTEXT_ISSUE_LIMIT) {
             lines.push('');

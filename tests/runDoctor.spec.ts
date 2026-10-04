@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { hasIssueAtOrAbove, issuesBySeverity, runContextAudit } from '../src/runDoctor';
-import { formatContextSection } from '../src/formatSummary';
+import { formatContextLog, formatContextSection } from '../src/formatSummary';
 
 let workspace: string;
 let repo: string;
@@ -55,5 +55,16 @@ describe('formatContextSection', () => {
       await runContextAudit(path.join(workspace, 'none'), workspace),
     );
     expect(empty).toContain('(repository)');
+  });
+});
+
+describe('formatContextLog', () => {
+  it('shows line numbers and hides the audited path for repository-wide issues', async () => {
+    await writeFile(path.join(repo, 'AGENTS.md'), '# Agents\n<!-- TODO: fill in -->\n');
+    expect(formatContextLog(await runContextAudit(repo, workspace))).toContain('AGENTS.md:2');
+
+    const empty = formatContextLog(await runContextAudit(repo + '-none', workspace));
+    expect(empty).toContain('[high] (repository) — No agent context files found');
+    expect(empty).not.toContain(workspace);
   });
 });
