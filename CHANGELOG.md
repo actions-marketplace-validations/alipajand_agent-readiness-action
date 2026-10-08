@@ -6,6 +6,10 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ## [Unreleased]
 
+### Changed
+
+- Bundled engines moved to the latest `main`: agent-readiness-kit `a993d17` → `3c156af` and agent-context-doctor `0855961` → `d36dd9d`. Both updates are README and dev-dependency changes only, so audit results and `dist/` are unchanged.
+
 ## [1.0.1] - 2026-09-24
 
 ### Changed
