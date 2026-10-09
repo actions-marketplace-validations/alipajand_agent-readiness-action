@@ -1,5 +1,12 @@
 # agent-readiness-action
 
+[![version](https://img.shields.io/github/v/release/alipajand/agent-readiness-action?label=version&color=blue)](https://github.com/alipajand/agent-readiness-action/releases)
+[![tests](https://img.shields.io/badge/tests-112%20passing-brightgreen)](https://github.com/alipajand/agent-readiness-action/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/badge/coverage-55%25-yellow)](https://github.com/alipajand/agent-readiness-action/actions/workflows/ci.yml)
+[![CI](https://github.com/alipajand/agent-readiness-action/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/alipajand/agent-readiness-action/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/alipajand/agent-readiness-action/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/alipajand/agent-readiness-action/actions/workflows/codeql.yml)
+[![license](https://img.shields.io/github/license/alipajand/agent-readiness-action?color=blue)](LICENSE)
+
 ## What it is
 
 A GitHub Action that checks how ready a repository is for AI coding agents (Claude Code,
@@ -293,6 +300,8 @@ To move to a newer engine, check out the commit you want in `vendor/agent-readin
 `vendor/agent-context-doctor`, run `pnpm build`, and commit both the submodule pointer and
 `dist/`. Dependabot opens weekly submodule update PRs; those need a `pnpm build` commit
 before CI passes.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow and pull request guidelines.
 
 ## License
 
