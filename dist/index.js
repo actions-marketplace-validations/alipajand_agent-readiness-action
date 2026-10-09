@@ -43125,6 +43125,9 @@ const WORKSPACE_TARGETING = new Set([
 // everything") rather than naming a script.
 const PROSE_WORDS = new Set('a an and as at by for from if in instead is it not of on only or so than that the then to via when which will with commands scripts version versions workspace packages'.split(' '));
 const TOKEN = /^[\w:.@/-]+$/;
+// A version after a package manager's name ("pnpm 11", "npm v10.x") is prose
+// about which release to use, not a script.
+const VERSION = /^v?\d+(?:\.(?:\d+|x))*$/i;
 function flagName(token) {
     return token.split('=')[0];
 }
@@ -43180,7 +43183,11 @@ function extractCommands(content) {
     content.split('\n').forEach((line, idx) => {
         for (const match of line.matchAll(/\b(pnpm|npm|yarn|bun)\b/g)) {
             const pm = match[1];
-            const tokens = commandSegment(line.slice(match.index + match[0].length));
+            const after = line.slice(match.index + match[0].length);
+            // `pnpm@9.12.0` or `npm@latest` names a release, not a command.
+            if (after.startsWith('@'))
+                continue;
+            const tokens = commandSegment(after);
             const parsed = parseInvocation(tokens);
             if (!parsed || parsed.workspaceScoped)
                 continue;
@@ -43188,7 +43195,7 @@ function extractCommands(content) {
             if (!TOKEN.test(command) || PROSE_WORDS.has(command.toLowerCase()))
                 continue;
             if (!viaRun) {
-                if (BUILTINS[pm].has(command))
+                if (BUILTINS[pm].has(command) || VERSION.test(command))
                     continue;
                 if (pm === 'npm' && !NPM_SHORTHAND_SCRIPTS.has(command))
                     continue;
@@ -44851,7 +44858,13 @@ function toGrade(total) {
         return 'needs-work';
     return 'risky';
 }
+// With no instruction files there is nothing whose quality could earn points,
+// so a single high deduction must not leave the repository graded "good".
+const NO_FILES_ISSUE = 'presence-no-files';
 function computeScore(issues) {
+    if (issues.some((issue) => issue.id === NO_FILES_ISSUE)) {
+        return { total: 0, max: 100, grade: toGrade(0) };
+    }
     const deduction = issues.reduce((sum, issue) => sum + (DEDUCTIONS[issue.severity] ?? 0), 0);
     const total = Math.max(0, 100 - deduction);
     return { total, max: 100, grade: toGrade(total) };
@@ -55286,10 +55299,10 @@ function Collection() {
 
 
 // pkg/dist-src/version.js
-var VERSION = "0.0.0-development";
+var dist_bundle_VERSION = "0.0.0-development";
 
 // pkg/dist-src/defaults.js
-var userAgent = `octokit-endpoint.js/${VERSION} ${getUserAgent()}`;
+var userAgent = `octokit-endpoint.js/${dist_bundle_VERSION} ${getUserAgent()}`;
 var DEFAULTS = {
   method: "GET",
   baseUrl: "https://api.github.com",
@@ -55895,12 +55908,12 @@ class RequestError extends Error {
 
 
 // pkg/dist-src/version.js
-var dist_bundle_VERSION = "10.0.10";
+var request_dist_bundle_VERSION = "10.0.10";
 
 // pkg/dist-src/defaults.js
 var defaults_default = {
   headers: {
-    "user-agent": `octokit-request.js/${dist_bundle_VERSION} ${getUserAgent()}`
+    "user-agent": `octokit-request.js/${request_dist_bundle_VERSION} ${getUserAgent()}`
   }
 };
 
