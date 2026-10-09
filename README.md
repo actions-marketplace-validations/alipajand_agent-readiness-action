@@ -14,7 +14,9 @@ Cursor, Codex, Copilot, and similar). It bundles two deterministic engines:
 
 - [agent-readiness-kit](https://github.com/alipajand/agent-readiness-kit) scores the
   repository from 0 to 100: instruction files, architecture notes, scripts, tests, safety
-  boundaries, and more. It prints a category breakdown in the log and job summary.
+  boundaries, and more. Lockfiles, version pins, test runners, linters, and formatters are
+  scored on the files of each detected ecosystem (Node.js, Python, Go, Rust). It prints a
+  category breakdown in the log and job summary.
 - [agent-context-doctor](https://github.com/alipajand/agent-context-doctor), with
   `context-audit: 'true'`, checks the instruction files themselves: placeholders, risky
   directives, contradictions, stale commands, pasted secrets, hidden Unicode, and risky
@@ -237,7 +239,7 @@ why `issues: write` is included alongside `pull-requests: write`.
 3. Logs a summary and a collapsible detail group.
 4. If `output` is set, writes the kit's Markdown report inside `repo-path`.
 5. If `json` is `true`, echoes the raw JSON to the log.
-6. If `baseline-ref` is set, audits that commit in a temporary git worktree and computes the score change.
+6. If `baseline-ref` is set, audits that commit in a temporary git worktree with the same bundled engine and computes the score change.
 7. If `comment-on-pr` is `true` and the event is a `pull_request`, posts or updates a comment.
 8. Writes the summary to the job summary (unless `job-summary` is `false`).
 9. Marks the step as failed if `score < min-score` (with `fail-on-threshold`) or the score dropped by more than `max-score-drop`.
