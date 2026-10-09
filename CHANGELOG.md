@@ -23,6 +23,10 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ### Security
 
+- Bundled agent-context-doctor moved `1ebc6f0` → `d70de51` (agent-context-doctor#72). With `context-audit: 'true'`:
+  - Makefile target parsing no longer takes quadratic time on a long line of blanks without a colon. A 1 MB line in an audited repository's Makefile could stall the step for minutes.
+  - `package.json` and the root Makefile are no longer read through a symlink that points outside the audited repository; such a file is treated as missing.
+  - `broken-references` no longer follows symlinked directories out of the repository when it checks whether a referenced path exists, so it cannot reveal which files exist outside it.
 - agent-readiness-kit keeps root file reads inside the repository and no longer enters symlinked directories named in a glob pattern, so a symlink in the audited repository cannot point the audit at files outside it.
 - Bundled agent-context-doctor moved `c0338d9` → `e05693d`. With `context-audit: 'true'`, an audited repository's `.acdrc` `rules.ignoreFiles` pattern that nests braces more than 10 levels deep or expands to more than 1,000 patterns now fails as a config error. Before, a deeply nested pattern could exhaust the stack in `braces` (GHSA-vfj7-8cjw-p6xm, no patched release) and a short run of sibling groups could exhaust memory. Valid brace patterns are unaffected. `braces` itself is still bundled.
 

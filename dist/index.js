@@ -45036,7 +45036,9 @@ function extractMakeTargets(content) {
 function parseMakeTargets(makefile) {
     const targets = new Set();
     for (const line of makefile.split('\n')) {
-        const match = /^([A-Za-z0-9_.\-/ ]+?)\s*::?(?!=)/.exec(line);
+        // Names and the blanks between them cannot overlap, which keeps matching
+        // linear on long lines of blanks that end without a colon.
+        const match = /^ *([A-Za-z0-9_.\/-]+(?:[ \t]+[A-Za-z0-9_.\/-]+)*)[ \t]*::?(?![:=])/.exec(line);
         if (!match)
             continue;
         for (const name of match[1].split(/\s+/)) {
@@ -47292,8 +47294,24 @@ function computeScore(issues) {
     return { total, max: 100, grade: toGrade(total) };
 }
 
-;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/fs/readPackageJson.ts
+;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/fs/readRepoFile.ts
 
+
+
+
+/**
+ * Read a file by its repo-relative path, or '' when it is missing or resolves
+ * outside the repository (a symlink), so its contents never reach evidence.
+ */
+async function readRepoFile(repoPath, rel) {
+    const realRepo = await promises_default().realpath(repoPath).catch(() => repoPath);
+    const realFile = await promises_default().realpath(external_node_path_default().join(repoPath, rel)).catch(() => null);
+    if (realFile === null || !fs_safePath_isWithin(realRepo, realFile))
+        return '';
+    return fs_readTextFile_readTextFile(realFile);
+}
+
+;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/fs/readPackageJson.ts
 
 function toScripts(value) {
     if (typeof value !== 'object' || value === null || Array.isArray(value))
@@ -47306,7 +47324,7 @@ function toScripts(value) {
     return scripts;
 }
 async function readPackageScripts(repoPath) {
-    const raw = await fs_readTextFile_readTextFile(external_node_path_default().join(repoPath, 'package.json'));
+    const raw = await readRepoFile(repoPath, 'package.json');
     if (raw === '')
         return null;
     try {
@@ -47422,6 +47440,7 @@ function filterSuppressedIssues(filePath, content, issues) {
 
 
 
+
 // Extensions of the bare file names `broken-references` checks.
 const BARE_NAME_PATTERNS = ['md', 'mdx', 'json', 'jsonc', 'yaml', 'yml', 'toml', 'sh'].map((ext) => `**/*.${ext}`);
 /**
@@ -47456,6 +47475,10 @@ function createNameLookup(repoPath) {
 async function findMissingReferences(repoPath, filePath, content, context) {
     const missing = new Set();
     const bases = [repoPath, external_node_path_default().resolve(repoPath, external_node_path_default().dirname(filePath))];
+    const realRepo = await promises_default().realpath(repoPath).catch(() => repoPath);
+    // A candidate only counts when its real path stays inside the repository, so
+    // a symlinked directory cannot be used to probe for files outside it.
+    const existsInside = (candidate) => promises_default().realpath(candidate).then((real) => fs_safePath_isWithin(realRepo, real), () => false);
     for (const { target, bare } of extractFileReferences(content)) {
         // ESM TypeScript imports name `.js` files whose source is `.ts`.
         const names = /\.[cm]?js$/.test(target)
@@ -47468,7 +47491,7 @@ async function findMissingReferences(repoPath, filePath, content, context) {
             continue;
         let found = false;
         for (const candidate of candidates) {
-            if (await promises_default().stat(candidate).then(() => true, () => false)) {
+            if (await existsInside(candidate)) {
                 found = true;
                 break;
             }
@@ -47485,20 +47508,9 @@ async function findMissingReferences(repoPath, filePath, content, context) {
     }
     return missing;
 }
-/**
- * Read a file by its repo-relative path, or '' when it is missing or resolves
- * outside the repository (a symlink), so its contents never reach evidence.
- */
-async function readRepoFile(repoPath, rel) {
-    const realRepo = await promises_default().realpath(repoPath).catch(() => repoPath);
-    const realFile = await promises_default().realpath(external_node_path_default().join(repoPath, rel)).catch(() => null);
-    if (realFile === null || !fs_safePath_isWithin(realRepo, realFile))
-        return '';
-    return fs_readTextFile_readTextFile(realFile);
-}
 async function readMakeTargets(repoPath) {
     for (const name of ['GNUmakefile', 'makefile', 'Makefile']) {
-        const content = await fs_readTextFile_readTextFile(external_node_path_default().join(repoPath, name));
+        const content = await readRepoFile(repoPath, name);
         if (content !== '')
             return parseMakeTargets(content);
     }
