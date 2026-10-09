@@ -11,7 +11,7 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   };
 });
 
-const { mkdtemp, mkdir, readFile, realpath, rm, writeFile, lstat } =
+const { mkdtemp, mkdir, open, readFile, realpath, rm, writeFile } =
   await import('node:fs/promises');
 const { tmpdir } = await import('node:os');
 const path = await import('node:path');
@@ -36,8 +36,10 @@ afterEach(async () => {
 describe('runArk report write — path swapped after opening', () => {
   it('refuses to truncate when the path no longer names the opened file', async () => {
     const report = path.join(repo, 'report.md');
-    await writeFile(report, 'keep');
-    const real = await lstat(report);
+    const handle = await open(report, 'wx');
+    await handle.writeFile('keep');
+    const real = await handle.stat();
+    await handle.close();
     lstatOverride.mockImplementation((filePath) =>
       filePath === report
         ? Promise.resolve({ ...real, ino: real.ino + 1, isSymbolicLink: () => false })
