@@ -6,6 +6,10 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ## [Unreleased]
 
+### Security
+
+- Bundled agent-context-doctor moved `c0338d9` → `e05693d`. With `context-audit: 'true'`, an audited repository's `.acdrc` `rules.ignoreFiles` pattern that nests braces more than 10 levels deep or expands to more than 1,000 patterns now fails as a config error. Before, a deeply nested pattern could exhaust the stack in `braces` (GHSA-vfj7-8cjw-p6xm, no patched release) and a short run of sibling groups could exhaust memory. Valid brace patterns are unaffected. `braces` itself is still bundled.
+
 ### Changed
 
 - Bundled engines moved to the latest `main`: agent-readiness-kit `a993d17` → `3c156af` and agent-context-doctor `0855961` → `d36dd9d`. Both updates are README and dev-dependency changes only, so audit results and `dist/` are unchanged.
