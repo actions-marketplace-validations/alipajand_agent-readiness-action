@@ -1,6 +1,6 @@
 import type { AuditResult } from './runArk';
 import { issuesBySeverity } from './runDoctor';
-import type { ContextAuditResult } from './runDoctor';
+import type { ContextAuditResult, ContextIssue } from './runDoctor';
 
 // Control characters (newlines included) from audited file names or messages
 // would otherwise break lines in logs and Markdown.
@@ -198,6 +198,13 @@ export function formatMarkdownComment(result: AuditResult, comparison?: ScoreCom
 
 const CONTEXT_ISSUE_LIMIT = 8;
 
+// Repository-wide issues carry the audited path as their file, which in CI is the
+// runner's checkout directory, so they are shown as "(repository)" instead.
+function contextIssueLocation(result: ContextAuditResult, issue: ContextIssue): string {
+  if (issue.file === result.repoPath) return '(repository)';
+  return issue.line ? `${issue.file}:${issue.line}` : issue.file;
+}
+
 /** Log lines for the agent-context-doctor audit. */
 export function formatContextLog(result: ContextAuditResult): string {
   const { score, summary } = result;
@@ -205,8 +212,9 @@ export function formatContextLog(result: ContextAuditResult): string {
     `Agent context quality: ${score.total}/${score.max} (${score.grade}) — ${summary.high} high, ${summary.medium} medium, ${summary.low} low`,
   ];
   for (const issue of issuesBySeverity(result)) {
-    const loc = issue.line ? `:${issue.line}` : '';
-    lines.push(`  [${issue.severity}] ${safeText(issue.file)}${loc} — ${safeText(issue.message)}`);
+    lines.push(
+      `  [${issue.severity}] ${safeText(contextIssueLocation(result, issue))} — ${safeText(issue.message)}`,
+    );
   }
   return lines.join('\n');
 }
@@ -227,10 +235,8 @@ export function formatContextSection(result: ContextAuditResult): string {
     lines.push('| Severity | File | Issue |');
     lines.push('|----------|------|-------|');
     for (const issue of issues.slice(0, CONTEXT_ISSUE_LIMIT)) {
-      const loc = issue.line ? `:${issue.line}` : '';
-      const file = issue.file === result.repoPath ? '(repository)' : `${issue.file}${loc}`;
       lines.push(
-        `| ${issue.severity} | ${tableCodeSpan(file)} | ${escapeMarkdown(issue.message)} |`,
+        `| ${issue.severity} | ${tableCodeSpan(contextIssueLocation(result, issue))} | ${escapeMarkdown(issue.message)} |`,
       );
     }
     if (issues.length > CONTEXT_ISSUE_LIMIT) {
