@@ -9,6 +9,9 @@ import {
   writeFile,
   access,
 } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { open } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { runArk } from '../src/runArk';
@@ -106,6 +109,36 @@ describe('runArk', () => {
     );
     expect(await readFile(target, 'utf8')).toBe('keep');
   });
+
+  it('rejects a report path that is a directory', async () => {
+    await mkdir(path.join(repo, 'report.md'));
+    await expect(runArk({ repoPath: repo, output: 'report.md' })).rejects.toMatchObject({
+      code: 'EISDIR',
+    });
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'rejects a FIFO at the report path without blocking',
+    async () => {
+      const fifo = path.join(repo, 'report.md');
+      execFileSync('mkfifo', [fifo]);
+
+      // No reader: opening for writing fails at once instead of waiting.
+      await expect(runArk({ repoPath: repo, output: 'report.md' })).rejects.toMatchObject({
+        code: 'ENXIO',
+      });
+
+      // With a reader: the opened file is checked and refused.
+      const reader = await open(fifo, constants.O_RDONLY | constants.O_NONBLOCK);
+      try {
+        await expect(runArk({ repoPath: repo, output: 'report.md' })).rejects.toThrow(
+          /not a regular file/,
+        );
+      } finally {
+        await reader.close();
+      }
+    },
+  );
 
   it('does not write score history into the audited repository', async () => {
     await runArk({ repoPath: repo });

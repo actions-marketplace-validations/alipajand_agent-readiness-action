@@ -40134,7 +40134,9 @@ function safePath_isRealpathWithin(root, target) {
  *
  * Symlinked directories are never traversed, so a link such as `docs -> /`
  * cannot walk the audit across the filesystem or list files from outside the
- * repository in a report. Symlinked files are kept when their target is a
+ * repository in a report. That includes a directory named in the pattern
+ * itself (`.github/workflows/*.yml` with `.github -> /elsewhere`), which
+ * fast-glob would otherwise enter. Symlinked files are kept when their target is a
  * regular file inside the repository (for example `CLAUDE.md -> AGENTS.md`).
  */
 async function findFiles(repoPath, patterns, options) {
@@ -40149,6 +40151,7 @@ async function findFiles(repoPath, patterns, options) {
         // A pattern such as `.clinerules/**/*.md` makes fast-glob scan
         // `.clinerules` as a directory; when it is a file that throws ENOTDIR.
         suppressErrors: true,
+        deep: options?.deep ?? Infinity,
         ignore: options?.ignore ?? [
             '**/node_modules/**',
             '**/.git/**',
@@ -40156,10 +40159,20 @@ async function findFiles(repoPath, patterns, options) {
         ],
     });
     const realRepo = await (0,promises_namespaceObject.realpath)(repoPath).catch(() => external_node_path_default().resolve(repoPath));
+    const realDirs = new Map();
+    const inRepoDir = (dir) => {
+        let inside = realDirs.get(dir);
+        if (!inside) {
+            inside = (0,promises_namespaceObject.realpath)(dir).then((real) => safePath_isWithin(realRepo, real), () => false);
+            realDirs.set(dir, inside);
+        }
+        return inside;
+    };
     const matches = [];
     for (const entry of entries) {
         if (entry.dirent.isFile()) {
-            matches.push(entry.path);
+            if (await inRepoDir(external_node_path_default().dirname(entry.path)))
+                matches.push(entry.path);
         }
         else if (entry.dirent.isSymbolicLink() &&
             (await isRegularFileInside(realRepo, entry.path))) {
@@ -40266,7 +40279,659 @@ async function fileHasPlaceholderContent(filePath) {
     return content !== null && containsPlaceholderContent(content);
 }
 
+;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/fs/writeFileSafe.ts
+
+
+
+
+
+// O_NOFOLLOW is undefined on Windows; the lstat check covers it there.
+const WRITE_FLAGS = external_node_fs_namespaceObject.constants.O_WRONLY |
+    external_node_fs_namespaceObject.constants.O_CREAT |
+    external_node_fs_namespaceObject.constants.O_TRUNC |
+    (external_node_fs_namespaceObject.constants.O_NOFOLLOW ?? 0);
+/** Write `content` to `filePath` without following a symlink at the final component. */
+async function writeFileNoFollow(filePath, content) {
+    const handle = await open(filePath, WRITE_FLAGS, 0o666);
+    try {
+        await handle.writeFile(content, 'utf8');
+    }
+    finally {
+        await handle.close();
+    }
+}
+/**
+ * Create `filePath` unless it already exists (or `force` is set).
+ *
+ * A symlink at the target counts as existing and is never written through,
+ * even with `force`: otherwise a repository could point `AGENTS.md` (or a
+ * dangling link) at a file elsewhere on the machine and have it overwritten.
+ * With `root`, writes that would land outside it are refused.
+ */
+async function writeFileSafe(filePath, content, options = {}) {
+    const existing = await lstat(filePath).catch(() => null);
+    if (existing && !options.force) {
+        return { path: filePath, status: 'skipped' };
+    }
+    if (existing?.isSymbolicLink()) {
+        return { path: filePath, status: 'refused', reason: 'symlink' };
+    }
+    if (options.root !== undefined &&
+        !(isWithin(path.resolve(options.root), path.resolve(filePath)) &&
+            isRealpathWithin(options.root, filePath))) {
+        return { path: filePath, status: 'refused', reason: 'outside-repo' };
+    }
+    await mkdir(path.dirname(filePath), { recursive: true });
+    await writeFileNoFollow(filePath, content);
+    return {
+        path: filePath,
+        status: existing ? 'overwritten' : 'created',
+    };
+}
+async function readJsonFile(filePath) {
+    const raw = await readTextFile_readTextFile(filePath);
+    if (raw === null)
+        return null;
+    try {
+        return JSON.parse(raw);
+    }
+    catch {
+        return null;
+    }
+}
+
+;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/audit/testFiles.ts
+
+
+
+const JS_EXT = '{js,jsx,mjs,cjs,ts,tsx,mts,cts}';
+const JS_EXT_RE = /\.(?:js|jsx|mjs|cjs|ts|tsx|mts|cts)$/;
+/**
+ * Test file conventions by language. A file counts as a test when it matches
+ * one of the patterns and is not under one of `TEST_SCAN_IGNORE`. `matches`
+ * repeats the patterns as a check on a repository-relative POSIX path, so a
+ * single directory walk can be split by language.
+ */
+const TEST_FILE_CONVENTIONS = [
+    {
+        language: 'JavaScript/TypeScript',
+        patterns: [`**/*.{test,spec}.${JS_EXT}`, `**/__tests__/**/*.${JS_EXT}`],
+        matches: (_rel, base, dirs) => /\.(?:test|spec)\.(?:js|jsx|mjs|cjs|ts|tsx|mts|cts)$/.test(base) ||
+            (dirs.includes('__tests__') && JS_EXT_RE.test(base)),
+    },
+    {
+        language: 'Go',
+        patterns: ['**/*_test.go'],
+        matches: (_rel, base) => base.endsWith('_test.go'),
+    },
+    {
+        language: 'Python',
+        patterns: ['**/test_*.py', '**/*_test.py'],
+        matches: (_rel, base) => (base.startsWith('test_') || base.endsWith('_test.py')) &&
+            base.endsWith('.py'),
+    },
+    {
+        language: 'Rust',
+        patterns: ['**/tests/**/*.rs'],
+        matches: (_rel, base, dirs) => dirs.includes('tests') && base.endsWith('.rs'),
+    },
+    {
+        language: 'Ruby',
+        patterns: ['**/*_spec.rb', '**/test_*.rb', '**/*_test.rb'],
+        matches: (_rel, base) => base.endsWith('.rb') &&
+            (base.endsWith('_spec.rb') ||
+                base.endsWith('_test.rb') ||
+                base.startsWith('test_')),
+    },
+    {
+        language: 'Java/Kotlin',
+        patterns: ['**/src/test/**/*.{java,kt}', '**/*{Test,Tests}.{java,kt}'],
+        matches: (rel, base) => /\.(?:java|kt)$/.test(base) &&
+            (`/${rel}`.includes('/src/test/') || /Tests?\.(?:java|kt)$/.test(base)),
+    },
+    {
+        language: 'C#',
+        patterns: ['**/*.Tests/**/*.cs', '**/*{Test,Tests}.cs'],
+        matches: (_rel, base, dirs) => base.endsWith('.cs') &&
+            (dirs.some((d) => d.endsWith('.Tests')) || /Tests?\.cs$/.test(base)),
+    },
+    // Any file under a root tests/ or test/ directory. Kept from the original
+    // JavaScript-only patterns so existing repositories keep their result.
+    {
+        language: 'tests/ directory',
+        patterns: ['tests/**/*', 'test/**/*'],
+        matches: (_rel, _base, dirs) => dirs[0] === 'tests' || dirs[0] === 'test',
+    },
+];
+/** Test discovery does not descend further than this many directory levels. */
+const MAX_TEST_SCAN_DEPTH = 20;
+/**
+ * Directories that hold dependencies, build output, virtual environments, or
+ * fixture data. Files in them are not the repository's own tests.
+ */
+const TEST_SCAN_IGNORE = [
+    '**/node_modules/**',
+    '**/.git/**',
+    '**/dist/**',
+    '**/build/**',
+    '**/out/**',
+    '**/target/**',
+    '**/vendor/**',
+    '**/third_party/**',
+    '**/.venv/**',
+    '**/venv/**',
+    '**/.tox/**',
+    '**/.nox/**',
+    '**/__pycache__/**',
+    '**/site-packages/**',
+    '**/coverage/**',
+    '**/.next/**',
+    '**/bin/**',
+    '**/obj/**',
+    '**/fixtures/**',
+    '**/__fixtures__/**',
+    '**/testdata/**',
+];
+/** Upper bound on Rust sources read when looking for inline unit tests. */
+const MAX_RUST_SOURCES_SCANNED = 500;
+const RUST_INLINE_TEST = /#\[(?:cfg\(test\)|test|tokio::test)\]/;
+/**
+ * Find test files across language conventions. Rust unit tests live inline in
+ * source files, so when a `Cargo.toml` is present the Rust sources are read
+ * for `#[test]` or `#[cfg(test)]`.
+ */
+async function findTestFiles(repoPath) {
+    // One directory walk for every convention plus the Rust inline-test inputs.
+    const found = await findFiles(repoPath, [
+        ...TEST_FILE_CONVENTIONS.flatMap((c) => c.patterns),
+        '**/Cargo.toml',
+        '**/src/**/*.rs',
+    ], { ignore: TEST_SCAN_IGNORE, deep: MAX_TEST_SCAN_DEPTH });
+    const byLanguage = new Map();
+    let hasCargo = false;
+    const rustSources = [];
+    for (const file of found) {
+        const rel = external_node_path_default().relative(repoPath, file).split((external_node_path_default()).sep).join('/');
+        const parts = rel.split('/');
+        const base = parts[parts.length - 1];
+        const dirs = parts.slice(0, -1);
+        if (base === 'Cargo.toml')
+            hasCargo = true;
+        const convention = TEST_FILE_CONVENTIONS.find((c) => c.matches(rel, base, dirs));
+        if (convention) {
+            const list = byLanguage.get(convention.language) ?? [];
+            list.push(file);
+            byLanguage.set(convention.language, list);
+        }
+        else if (base.endsWith('.rs') && dirs.includes('src')) {
+            rustSources.push(file);
+        }
+    }
+    const files = [];
+    const languages = [];
+    for (const { language } of TEST_FILE_CONVENTIONS) {
+        const list = byLanguage.get(language);
+        if (list) {
+            languages.push(language);
+            files.push(...list);
+        }
+    }
+    // Rust unit tests live inline in source files.
+    if (hasCargo) {
+        const inline = [];
+        for (const file of rustSources.slice(0, MAX_RUST_SOURCES_SCANNED)) {
+            const content = await readTextFile_readTextFile(file);
+            if (content !== null && RUST_INLINE_TEST.test(content))
+                inline.push(file);
+        }
+        if (inline.length > 0) {
+            if (!languages.includes('Rust'))
+                languages.push('Rust');
+            files.push(...inline);
+        }
+    }
+    return { files: files.sort(), languages };
+}
+
+;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/audit/ecosystems.ts
+
+
+
+/**
+ * Ecosystems whose project files the audit understands. Checks that look for
+ * ecosystem-specific files (lockfiles, version pins, test runners, linters,
+ * formatters) evaluate each detected ecosystem against its own equivalents.
+ */
+const ECOSYSTEM_IDS = ['node', 'python', 'go', 'rust'];
+const ECOSYSTEM_LABELS = {
+    node: 'Node.js',
+    python: 'Python',
+    go: 'Go',
+    rust: 'Rust',
+};
+/**
+ * Manifests are looked for this many directory levels deep, so a Python API
+ * with a `frontend/package.json` or `apps/web/package.json` is seen as both.
+ */
+const MANIFEST_SCAN_DEPTH = 4;
+/** Directories whose manifests do not describe the repository itself. */
+const ECOSYSTEM_SCAN_IGNORE = [
+    ...TEST_SCAN_IGNORE,
+    '**/examples/**',
+    '**/example/**',
+];
+const MANIFESTS = {
+    node: {
+        anyDepth: ['package.json'],
+        root: [
+            'pnpm-lock.yaml',
+            'package-lock.json',
+            'yarn.lock',
+            'bun.lock',
+            'bun.lockb',
+        ],
+    },
+    python: {
+        anyDepth: ['pyproject.toml', 'setup.py', 'Pipfile'],
+        // A nested requirements.txt is usually a docs or tooling helper (for
+        // example docs/requirements.txt for Read the Docs), so only the root counts.
+        root: ['requirements.txt', 'requirements-*.txt', 'requirements/*.txt'],
+    },
+    go: { anyDepth: ['go.mod'], root: [] },
+    rust: { anyDepth: ['Cargo.toml'], root: [] },
+};
+async function detectEcosystems(repoPath) {
+    const ids = [];
+    const manifests = {};
+    for (const id of ECOSYSTEM_IDS) {
+        const { anyDepth, root } = MANIFESTS[id];
+        const found = [
+            ...(await findInRepo(repoPath, anyDepth.map((name) => `**/${name}`))),
+            ...(root.length > 0 ? await findInRepo(repoPath, root) : []),
+        ];
+        if (found.length > 0) {
+            ids.push(id);
+            manifests[id] = [...new Set(found)].sort();
+        }
+    }
+    return { ids, manifests };
+}
+/**
+ * Glob within the manifest scan depth, skipping dependency, build, fixture,
+ * and example directories. Returns repository-relative POSIX paths, sorted.
+ */
+async function findInRepo(repoPath, patterns) {
+    const files = await findFiles(repoPath, patterns, {
+        ignore: ECOSYSTEM_SCAN_IGNORE,
+        deep: MANIFEST_SCAN_DEPTH,
+    });
+    return files.map((f) => external_node_path_default().relative(repoPath, f).split((external_node_path_default()).sep).join('/'));
+}
+/**
+ * Display text for a result's `ecosystems` field: labels for known ids, raw
+ * ids otherwise (results loaded from JSON can hold anything), or
+ * `none detected`. Callers escape the text for their output format.
+ */
+function describeEcosystems(ids) {
+    if (ids.length === 0)
+        return 'none detected';
+    return ids
+        .map((id) => Object.hasOwn(ECOSYSTEM_LABELS, id)
+        ? ECOSYSTEM_LABELS[id]
+        : id)
+        .join(', ');
+}
+/**
+ * Score one ecosystem-specific signal worth `maxPoints`.
+ *
+ * - With detected ecosystems, each one is evaluated on its own files and the
+ *   signal earns `floor(maxPoints * satisfied / detected)`. A polyglot
+ *   repository is scored on every stack it contains.
+ * - With no detected ecosystem, `fallback` looks for the evidence of any
+ *   supported ecosystem and the signal earns full points only when that
+ *   evidence exists. Nothing is awarded for a check that does not apply.
+ */
+async function scoreEcosystemSignal(detected, maxPoints, evaluate, fallback) {
+    if (detected.ids.length === 0) {
+        const evaluation = await fallback();
+        return {
+            points: evaluation.satisfied ? maxPoints : 0,
+            satisfied: evaluation.satisfied ? 1 : 0,
+            applicable: 1,
+            results: [{ id: null, evaluation }],
+        };
+    }
+    const results = [];
+    for (const id of detected.ids) {
+        results.push({ id, evaluation: await evaluate(id) });
+    }
+    const satisfied = results.filter((r) => r.evaluation.satisfied).length;
+    return {
+        points: proportionalPoints(maxPoints, satisfied, detected.ids.length),
+        satisfied,
+        applicable: detected.ids.length,
+        results,
+    };
+}
+/** `floor(maxPoints * satisfied / applicable)`, or 0 when nothing applies. */
+function proportionalPoints(maxPoints, satisfied, applicable) {
+    if (applicable <= 0)
+        return 0;
+    return Math.floor((maxPoints * satisfied) / applicable);
+}
+
+;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/audit/projectFiles.ts
+
+
+
+
+
+
+/**
+ * Line-based readers for project files the audit inspects. They recognize
+ * the common layouts of each format; they are not full parsers.
+ */
+/**
+ * Map each TOML table header (`[a.b]` or `[[a.b]]`) to the keys set in it.
+ * Keys before the first header belong to the table named `''`.
+ */
+function tomlTables(content) {
+    const tables = new Map([['', []]]);
+    let current = '';
+    for (const raw of content.split(/\r?\n/)) {
+        const line = raw.trim();
+        if (line === '' || line.startsWith('#'))
+            continue;
+        const header = /^\[\[?([^\]]*)\]\]?$/.exec(line);
+        if (header) {
+            current = header[1]
+                .trim()
+                .replace(/["']/g, '')
+                .split('.')
+                .map((part) => part.trim())
+                .join('.');
+            if (!tables.has(current))
+                tables.set(current, []);
+            continue;
+        }
+        const key = /^("[^"]+"|'[^']+'|[A-Za-z0-9_.-]+)\s*=/.exec(line);
+        if (key)
+            tables.get(current)?.push(key[1].replace(/["']/g, ''));
+    }
+    return tables;
+}
+/** True when a table equal to `name`, or nested under it, exists. */
+function hasTomlTable(tables, name) {
+    for (const table of tables.keys()) {
+        if (table === name || table.startsWith(`${name}.`))
+            return true;
+    }
+    return false;
+}
+/** INI section names (`[name]`), as used by setup.cfg, tox.ini, and pytest.ini. */
+function iniSections(content) {
+    const sections = [];
+    for (const raw of content.split(/\r?\n/)) {
+        const match = /^\s*\[([^\]]+)\]\s*$/.exec(raw);
+        if (match)
+            sections.push(match[1].trim());
+    }
+    return sections;
+}
+/** Explicit target names in a Makefile. Pattern rules and special targets are skipped. */
+function makefileTargets(content) {
+    const targets = [];
+    for (const line of content.split(/\r?\n/)) {
+        if (line.startsWith('\t') || line.trimStart().startsWith('#'))
+            continue;
+        const match = /^([^\s:=#][^:=#]*)::?(?!=)/.exec(line);
+        if (!match)
+            continue;
+        for (const name of match[1].trim().split(/[ \t]+/)) {
+            if (/^[A-Za-z0-9][A-Za-z0-9_./-]*$/.test(name))
+                targets.push(name);
+        }
+    }
+    return unique(targets);
+}
+const JUST_KEYWORDS = new Set(['set', 'alias', 'export', 'import', 'mod']);
+/** Recipe names in a justfile. */
+function justfileRecipes(content) {
+    const recipes = [];
+    for (const line of content.split(/\r?\n/)) {
+        const match = /^@?([A-Za-z_][A-Za-z0-9_-]*)(?:\s[^:]*)?:(?!=)/.exec(line);
+        if (match && !JUST_KEYWORDS.has(match[1]))
+            recipes.push(match[1]);
+    }
+    return unique(recipes);
+}
+/** Task names under the top-level `tasks:` key of a Taskfile. */
+function taskfileTasks(content) {
+    const tasks = [];
+    let inTasks = false;
+    let indent = null;
+    for (const line of content.split(/\r?\n/)) {
+        if (line.trim() === '' || line.trimStart().startsWith('#'))
+            continue;
+        if (/^tasks:\s*$/.test(line)) {
+            inTasks = true;
+            continue;
+        }
+        if (!inTasks)
+            continue;
+        const lead = line.length - line.trimStart().length;
+        if (lead === 0)
+            break;
+        indent ??= lead;
+        if (lead !== indent)
+            continue;
+        const match = /^\s+["']?([A-Za-z0-9_:.-]+)["']?:/.exec(line);
+        if (match)
+            tasks.push(match[1]);
+    }
+    return unique(tasks);
+}
+/** Task names from poe, pdm, hatch, and taskipy tables in pyproject.toml. */
+function pyprojectTasks(tables) {
+    const tasks = [];
+    for (const [table, keys] of tables) {
+        if (table === 'tool.poe.tasks' ||
+            table === 'tool.pdm.scripts' ||
+            table === 'tool.taskipy.tasks' ||
+            /^tool\.hatch\.envs\.[^.]+\.scripts$/.test(table)) {
+            tasks.push(...keys.map((k) => k.split('.')[0]));
+        }
+        const nested = /^tool\.(?:poe\.tasks|pdm\.scripts)\.([^.]+)$/.exec(table);
+        if (nested)
+            tasks.push(nested[1]);
+    }
+    return unique(tasks.filter((t) => t !== '_' && !t.startsWith('_')));
+}
+/** tox environments: the default `[testenv]` runs tests; `[testenv:x]` adds `x`. */
+function toxEnvironments(content) {
+    const envs = [];
+    for (const section of iniSections(content)) {
+        if (section === 'testenv')
+            envs.push('test');
+        const named = /^testenv:(.+)$/.exec(section);
+        if (named)
+            envs.push(named[1].trim());
+    }
+    return unique(envs);
+}
+/** Session names decorated with `@nox.session` in a noxfile. */
+function noxSessions(content) {
+    const sessions = [];
+    let pending = false;
+    for (const raw of content.split(/\r?\n/)) {
+        const line = raw.trim();
+        if (line.startsWith('@nox.session')) {
+            pending = true;
+        }
+        else if (pending && line.startsWith('@')) {
+            continue;
+        }
+        else if (pending) {
+            const def = /^def[ \t]+(\w+)[ \t]*\(/.exec(line);
+            if (def)
+                sessions.push(def[1]);
+            pending = false;
+        }
+    }
+    return unique(sessions);
+}
+const TASK_NAME = /^[A-Za-z0-9][A-Za-z0-9_.:-]*$/;
+/** Upper bound on nested package.json files read when there is no root one. */
+const MAX_NESTED_PACKAGE_FILES = 20;
+/** Bounds on the automation files read for tool invocations. */
+const MAX_AUTOMATION_FILES = 100;
+const MAX_AUTOMATION_BYTES = 4 * 1024 * 1024;
+/** True for a package.json task source, at the root or nested. */
+function isPackageJsonSource(source) {
+    return source === 'package.json' || source.endsWith('/package.json');
+}
+/**
+ * Commands defined at the repository root, per task runner. `package.json`
+ * comes first so Node.js repositories report the same way as before.
+ *
+ * When there is no root `package.json`, the scripts of nested ones (such as
+ * `frontend/package.json` beside a Python API) are read instead, listed under
+ * their own path.
+ */
+async function readTaskSources(repoPath, nodeManifests = []) {
+    const sources = [];
+    const add = (source, names) => {
+        // Names from file contents can reach report messages; keep plain ones.
+        const safe = isPackageJsonSource(source)
+            ? names
+            : names.filter((n) => TASK_NAME.test(n));
+        if (safe.length > 0)
+            sources.push({ source, names: safe });
+    };
+    const rootPkg = await readRoot(repoPath, 'package.json');
+    const packageFiles = rootPkg !== null
+        ? ['package.json']
+        : nodeManifests
+            .filter((m) => m.endsWith('/package.json'))
+            .slice(0, MAX_NESTED_PACKAGE_FILES);
+    for (const rel of packageFiles) {
+        const pkg = rel === 'package.json'
+            ? parseJson(rootPkg)
+            : await readJsonFile(external_node_path_default().join(repoPath, rel));
+        const scripts = pkg?.scripts;
+        if (scripts && typeof scripts === 'object' && !Array.isArray(scripts)) {
+            add(rel, Object.keys(scripts).filter((k) => Boolean(scripts[k])));
+        }
+    }
+    for (const name of ['Makefile', 'makefile', 'GNUmakefile']) {
+        const content = await readRoot(repoPath, name);
+        if (content !== null) {
+            add(name, makefileTargets(content));
+            break;
+        }
+    }
+    for (const name of ['justfile', 'Justfile', '.justfile']) {
+        const content = await readRoot(repoPath, name);
+        if (content !== null) {
+            add(name, justfileRecipes(content));
+            break;
+        }
+    }
+    for (const name of [
+        'Taskfile.yml',
+        'Taskfile.yaml',
+        'taskfile.yml',
+        'taskfile.yaml',
+    ]) {
+        const content = await readRoot(repoPath, name);
+        if (content !== null) {
+            add(name, taskfileTasks(content));
+            break;
+        }
+    }
+    const pyproject = await readRoot(repoPath, 'pyproject.toml');
+    if (pyproject !== null) {
+        add('pyproject.toml', pyprojectTasks(tomlTables(pyproject)));
+    }
+    const tox = await readRoot(repoPath, 'tox.ini');
+    if (tox !== null)
+        add('tox.ini', toxEnvironments(tox));
+    const nox = await readRoot(repoPath, 'noxfile.py');
+    if (nox !== null)
+        add('noxfile.py', noxSessions(nox));
+    return sources;
+}
+/**
+ * Concatenated text of files that run tools: task runners, pre-commit, CI
+ * workflows, and tox/nox. Used to find tool invocations such as `gofmt` or
+ * `cargo clippy` that need no config file of their own.
+ */
+async function readAutomationText(repoPath) {
+    const files = await findInRepo(repoPath, [
+        'Makefile',
+        'makefile',
+        'GNUmakefile',
+        'justfile',
+        'Justfile',
+        '.justfile',
+        'Taskfile.{yml,yaml}',
+        'taskfile.{yml,yaml}',
+        '.pre-commit-config.{yml,yaml}',
+        'lefthook.{yml,yaml}',
+        '.github/workflows/*.{yml,yaml}',
+        '.gitlab-ci.yml',
+        'tox.ini',
+        'noxfile.py',
+        'pyproject.toml',
+    ]);
+    const parts = [];
+    let bytes = 0;
+    for (const rel of files.slice(0, MAX_AUTOMATION_FILES)) {
+        const content = await readTextFile_readTextFile(external_node_path_default().join(repoPath, rel));
+        if (content === null)
+            continue;
+        bytes += content.length;
+        if (bytes > MAX_AUTOMATION_BYTES)
+            break;
+        parts.push(content);
+    }
+    return parts.join('\n');
+}
+/**
+ * Read a file at the repository root. Goes through `findFiles`, so a symlink
+ * is read only when it points at a regular file inside the repository.
+ */
+async function readRoot(repoPath, rel) {
+    const [file] = await findFiles(repoPath, out_default().escapePath(rel));
+    return file ? readTextFile_readTextFile(file) : null;
+}
+/** Parse a JSON file at the repository root, read through `readRoot`. */
+async function readRootJson(repoPath, rel) {
+    return parseJson(await readRoot(repoPath, rel));
+}
+function parseJson(raw) {
+    if (raw === null)
+        return null;
+    try {
+        return JSON.parse(raw);
+    }
+    catch {
+        return null;
+    }
+}
+/**
+ * True when `rel` is a regular file inside the repository. Unlike
+ * `fileExists`, a symlink to a file outside the repository does not count.
+ */
+async function repoFileExists(repoPath, rel) {
+    return (await findFiles(repoPath, out_default().escapePath(rel))).length > 0;
+}
+function unique(values) {
+    return [...new Set(values)];
+}
+
 ;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/audit/checks/agentInstructions.ts
+
 
 
 
@@ -40322,7 +40987,7 @@ async function checkAgentInstructions(repoPath) {
             message: 'AGENTS.md found',
             files: ['AGENTS.md'],
         });
-        if (await fileHasPlaceholderContent(agentsMd)) {
+        if (containsPlaceholderContent((await readRoot(repoPath, 'AGENTS.md')) ?? '')) {
             findings.push({
                 status: 'warn',
                 message: `${PLACEHOLDER_WARNING} (AGENTS.md)`,
@@ -40471,68 +41136,368 @@ async function checkAgentInstructions(repoPath) {
     };
 }
 
-;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/fs/writeFileSafe.ts
+;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/audit/checks/dependencies.ts
 
 
 
 
 
-// O_NOFOLLOW is undefined on Windows; the lstat check covers it there.
-const WRITE_FLAGS = external_node_fs_namespaceObject.constants.O_WRONLY |
-    external_node_fs_namespaceObject.constants.O_CREAT |
-    external_node_fs_namespaceObject.constants.O_TRUNC |
-    (external_node_fs_namespaceObject.constants.O_NOFOLLOW ?? 0);
-/** Write `content` to `filePath` without following a symlink at the final component. */
-async function writeFileNoFollow(filePath, content) {
-    const handle = await open(filePath, WRITE_FLAGS, 0o666);
-    try {
-        await handle.writeFile(content, 'utf8');
+
+const dependencies_MAX_SCORE = 10;
+const LOCKFILE_POINTS = 3;
+const VERSION_PIN_POINTS = 2;
+const NODE_LOCKFILES = [
+    'pnpm-lock.yaml',
+    'package-lock.json',
+    'yarn.lock',
+    'bun.lock',
+    'bun.lockb',
+    'npm-shrinkwrap.json',
+];
+const PYTHON_LOCKFILES = [
+    'uv.lock',
+    'poetry.lock',
+    'Pipfile.lock',
+    'pdm.lock',
+    'pylock.toml',
+    'pylock.*.toml',
+];
+const LOCKFILE_MISSING = {
+    node: 'No lockfile found (pnpm-lock.yaml / package-lock.json / yarn.lock)',
+    python: 'No Python lockfile found (uv.lock / poetry.lock / Pipfile.lock / pdm.lock, or fully pinned requirements.txt)',
+    go: 'No go.sum found for a go.mod that declares dependencies',
+    rust: 'No Cargo.lock found',
+};
+const VERSION_PIN_MISSING = {
+    node: 'No Node.js version pin (.nvmrc, .node-version, or engines in package.json)',
+    python: 'No Python version pin (.python-version or requires-python in pyproject.toml)',
+    go: 'No Go version declared (go directive in go.mod or .go-version)',
+    rust: 'No Rust toolchain pin (rust-toolchain.toml or rust-version in Cargo.toml)',
+};
+async function checkDependencies(repoPath, detected) {
+    const ecosystems = detected ?? (await detectEcosystems(repoPath));
+    const findings = [];
+    let score = 0;
+    // Lockfile per ecosystem
+    const lockfiles = await scoreEcosystemSignal(ecosystems, LOCKFILE_POINTS, (id) => evaluateLockfile(repoPath, ecosystems, id), () => anyEcosystem((id) => evaluateLockfile(repoPath, ecosystems, id), 'No dependency manifest or lockfile found'));
+    score += lockfiles.points;
+    pushOutcome(findings, lockfiles, 'fail');
+    // Runtime / toolchain version pin per ecosystem
+    const pins = await scoreEcosystemSignal(ecosystems, VERSION_PIN_POINTS, (id) => evaluateVersionPin(repoPath, ecosystems, id), () => anyEcosystem((id) => evaluateVersionPin(repoPath, ecosystems, id), 'No runtime or toolchain version pin found'));
+    score += pins.points;
+    pushOutcome(findings, pins, 'warn');
+    // Dependabot or Renovate
+    const depbotPaths = ['.github/dependabot.yml', '.github/dependabot.yaml'];
+    let foundDepbot = null;
+    for (const rel of depbotPaths) {
+        if (await fileExists(external_node_path_default().join(repoPath, rel))) {
+            foundDepbot = rel;
+            break;
+        }
     }
-    finally {
-        await handle.close();
+    const renovateFiles = await findFiles(repoPath, [
+        'renovate.json',
+        'renovate.json5',
+        '.renovaterc',
+        '.renovaterc.json',
+    ]);
+    if (foundDepbot) {
+        score += 3;
+        findings.push({
+            status: 'pass',
+            message: `Dependabot config found: ${foundDepbot}`,
+            files: [foundDepbot],
+        });
     }
-}
-/**
- * Create `filePath` unless it already exists (or `force` is set).
- *
- * A symlink at the target counts as existing and is never written through,
- * even with `force`: otherwise a repository could point `AGENTS.md` (or a
- * dangling link) at a file elsewhere on the machine and have it overwritten.
- * With `root`, writes that would land outside it are refused.
- */
-async function writeFileSafe(filePath, content, options = {}) {
-    const existing = await lstat(filePath).catch(() => null);
-    if (existing && !options.force) {
-        return { path: filePath, status: 'skipped' };
+    else if (renovateFiles.length > 0) {
+        score += 3;
+        findings.push({
+            status: 'pass',
+            message: 'Renovate config found',
+            files: renovateFiles.map((f) => external_node_path_default().relative(repoPath, f)).slice(0, 3),
+        });
     }
-    if (existing?.isSymbolicLink()) {
-        return { path: filePath, status: 'refused', reason: 'symlink' };
+    else {
+        findings.push({
+            status: 'warn',
+            message: 'No automated dependency update config (dependabot.yml or renovate.json)',
+        });
     }
-    if (options.root !== undefined &&
-        !(isWithin(path.resolve(options.root), path.resolve(filePath)) &&
-            isRealpathWithin(options.root, filePath))) {
-        return { path: filePath, status: 'refused', reason: 'outside-repo' };
+    // Package manager / registry config
+    const pyproject = await readRoot(repoPath, 'pyproject.toml');
+    const pyTables = pyproject ? tomlTables(pyproject) : null;
+    const registryFiles = [
+        '.npmrc',
+        '.pnpmfile.cjs',
+        'uv.toml',
+        'pip.conf',
+        '.cargo/config.toml',
+        '.cargo/config',
+    ];
+    let registry = null;
+    for (const rel of registryFiles) {
+        if (await repoFileExists(repoPath, rel)) {
+            registry = rel;
+            break;
+        }
     }
-    await mkdir(path.dirname(filePath), { recursive: true });
-    await writeFileNoFollow(filePath, content);
+    if (!registry && pyTables && hasTomlTable(pyTables, 'tool.uv')) {
+        registry = 'pyproject.toml [tool.uv]';
+    }
+    if (registry) {
+        score += 1;
+        findings.push({
+            status: 'pass',
+            message: `Package manager config: ${registry}`,
+            files: [registry.split(' ')[0]],
+        });
+    }
+    // Workspace config
+    const hasWorkspaceRoot = (await dirExists(external_node_path_default().join(repoPath, 'packages'))) ||
+        (await dirExists(external_node_path_default().join(repoPath, 'apps')));
+    const hasPnpmWorkspace = await fileExists(external_node_path_default().join(repoPath, 'pnpm-workspace.yaml'));
+    if (hasWorkspaceRoot && hasPnpmWorkspace) {
+        score += 1;
+        findings.push({
+            status: 'pass',
+            message: 'pnpm-workspace.yaml present in monorepo',
+            files: ['pnpm-workspace.yaml'],
+        });
+    }
+    else {
+        const other = await findWorkspaceConfig(repoPath);
+        if (other) {
+            score += 1;
+            findings.push({
+                status: 'pass',
+                message: `Workspace config: ${other}`,
+                files: [other.split(' ')[0]],
+            });
+        }
+    }
+    score = Math.min(dependencies_MAX_SCORE, score);
+    if (score === 0) {
+        findings.push({
+            status: 'fail',
+            message: 'No dependency hygiene signals detected',
+        });
+    }
+    else if (score < 5) {
+        findings.push({
+            status: 'warn',
+            message: 'Limited dependency hygiene configuration',
+        });
+    }
     return {
-        path: filePath,
-        status: existing ? 'overwritten' : 'created',
+        id: 'dependencies',
+        label: 'Dependency hygiene',
+        score,
+        maxScore: dependencies_MAX_SCORE,
+        findings,
     };
 }
-async function readJsonFile(filePath) {
-    const raw = await readTextFile_readTextFile(filePath);
-    if (raw === null)
-        return null;
-    try {
-        return JSON.parse(raw);
+/** go.work, a Cargo `[workspace]`, or a uv workspace. */
+async function findWorkspaceConfig(repoPath) {
+    if (await repoFileExists(repoPath, 'go.work'))
+        return 'go.work';
+    const cargo = await readRoot(repoPath, 'Cargo.toml');
+    if (cargo && hasTomlTable(tomlTables(cargo), 'workspace')) {
+        return 'Cargo.toml [workspace]';
     }
-    catch {
-        return null;
+    const pyproject = await readRoot(repoPath, 'pyproject.toml');
+    if (pyproject && hasTomlTable(tomlTables(pyproject), 'tool.uv.workspace')) {
+        return 'pyproject.toml [tool.uv.workspace]';
     }
+    return null;
+}
+function pushOutcome(findings, outcome, missingStatus) {
+    for (const { evaluation } of outcome.results) {
+        if (evaluation.satisfied) {
+            findings.push({
+                status: 'pass',
+                message: evaluation.passMessage ?? 'Present',
+                ...(evaluation.files ? { files: evaluation.files } : {}),
+            });
+        }
+        else {
+            findings.push({
+                status: missingStatus,
+                message: evaluation.missingMessage ?? 'Missing',
+            });
+        }
+    }
+}
+/** Fallback when no ecosystem is detected: any supported ecosystem's evidence. */
+async function anyEcosystem(evaluate, missingMessage) {
+    for (const id of ECOSYSTEM_IDS) {
+        const evaluation = await evaluate(id);
+        if (evaluation.satisfied)
+            return evaluation;
+    }
+    return { satisfied: false, missingMessage };
+}
+async function evaluateLockfile(repoPath, ecosystems, id) {
+    const found = (files, label = files[0]) => ({
+        satisfied: true,
+        passMessage: `Lockfile present: ${label}`,
+        files: files.slice(0, 5),
+    });
+    const missing = { satisfied: false, missingMessage: LOCKFILE_MISSING[id] };
+    if (id === 'node') {
+        // Root lockfiles first, in the original order, then nested ones.
+        for (const rel of NODE_LOCKFILES) {
+            if (await repoFileExists(repoPath, rel))
+                return found([rel]);
+        }
+        const nested = await findInRepo(repoPath, NODE_LOCKFILES.map((f) => `**/${f}`));
+        return nested.length > 0 ? found(nested) : missing;
+    }
+    if (id === 'python') {
+        const locks = await findInRepo(repoPath, PYTHON_LOCKFILES.map((f) => `**/${f}`));
+        if (locks.length > 0)
+            return found(locks);
+        const requirements = await findInRepo(repoPath, [
+            'requirements*.txt',
+            'requirements/*.txt',
+        ]);
+        const pinned = [];
+        for (const rel of requirements) {
+            const content = await readTextFile_readTextFile(external_node_path_default().join(repoPath, rel));
+            if (content !== null && requirementsArePinned(content))
+                pinned.push(rel);
+        }
+        return pinned.length > 0
+            ? found(pinned, `${pinned[0]} (all requirements pinned)`)
+            : missing;
+    }
+    if (id === 'go') {
+        const sums = await findInRepo(repoPath, '**/go.sum');
+        if (sums.length > 0)
+            return found(sums);
+        const mods = ecosystems.manifests.go ?? [];
+        for (const rel of mods) {
+            const content = await readTextFile_readTextFile(external_node_path_default().join(repoPath, rel));
+            if (content === null || goModRequires(content))
+                return missing;
+        }
+        // A module with no requirements has nothing to lock; go.sum is not created.
+        return mods.length > 0
+            ? {
+                satisfied: true,
+                passMessage: 'go.mod declares no dependencies (nothing to lock)',
+                files: mods.slice(0, 5),
+            }
+            : missing;
+    }
+    const cargoLocks = await findInRepo(repoPath, '**/Cargo.lock');
+    return cargoLocks.length > 0 ? found(cargoLocks) : missing;
+}
+/** True when every requirement line pins an exact version (`==` or `===`). */
+function requirementsArePinned(content) {
+    let requirements = 0;
+    for (const raw of content.split(/\r?\n/)) {
+        const line = raw.replace(/\s#[\s\S]*/, '').trim();
+        if (line === '' || line.startsWith('#') || line.startsWith('-'))
+            continue;
+        requirements += 1;
+        if (!/[^=!<>~]==={0,1}[^=]/.test(line))
+            return false;
+    }
+    return requirements > 0;
+}
+/** True when go.mod has a `require` directive. */
+function goModRequires(content) {
+    return /^[ \t]*require\b/m.test(content);
+}
+async function evaluateVersionPin(repoPath, ecosystems, id) {
+    const pass = (message, file) => ({
+        satisfied: true,
+        passMessage: message,
+        files: [file],
+    });
+    const missing = { satisfied: false, missingMessage: VERSION_PIN_MISSING[id] };
+    const toolVersions = await readRoot(repoPath, '.tool-versions');
+    const toolPinned = (names) => toolVersions !== null &&
+        toolVersions
+            .split(/\r?\n/)
+            .some((l) => names.includes(l.trim().split(/\s+/)[0] ?? ''));
+    if (id === 'node') {
+        for (const rel of ['.nvmrc', '.node-version']) {
+            if (await repoFileExists(repoPath, rel)) {
+                return pass(`Node version pinned: ${rel}`, rel);
+            }
+        }
+        if (toolPinned(['nodejs', 'node'])) {
+            return pass('Node version pinned: .tool-versions', '.tool-versions');
+        }
+        const pkg = await readRootJson(repoPath, 'package.json');
+        if (pkg?.engines && Object.keys(pkg.engines).length > 0) {
+            return pass('Node version constrained via package.json engines field', 'package.json');
+        }
+        const nested = await findInRepo(repoPath, [
+            '**/.nvmrc',
+            '**/.node-version',
+        ]);
+        if (nested.length > 0) {
+            return pass(`Node version pinned: ${nested[0]}`, nested[0]);
+        }
+        return missing;
+    }
+    if (id === 'python') {
+        const files = await findInRepo(repoPath, '**/.python-version');
+        if (files.length > 0) {
+            return pass(`Python version pinned: ${files[0]}`, files[0]);
+        }
+        if (toolPinned(['python'])) {
+            return pass('Python version pinned: .tool-versions', '.tool-versions');
+        }
+        for (const rel of ecosystems.manifests.python ?? []) {
+            if (!rel.endsWith('pyproject.toml') && !rel.endsWith('Pipfile'))
+                continue;
+            const content = await readTextFile_readTextFile(external_node_path_default().join(repoPath, rel));
+            if (content &&
+                /^[ \t]*(requires-python|python_version)[ \t]*=/m.test(content)) {
+                return pass(`Python version constrained via ${rel}`, rel);
+            }
+        }
+        return missing;
+    }
+    if (id === 'go') {
+        for (const rel of ecosystems.manifests.go ?? []) {
+            const content = await readTextFile_readTextFile(external_node_path_default().join(repoPath, rel));
+            if (content && /^[ \t]*(go|toolchain)[ \t]+\S/m.test(content)) {
+                return pass(`Go version declared in ${rel}`, rel);
+            }
+        }
+        if (await repoFileExists(repoPath, '.go-version')) {
+            return pass('Go version pinned: .go-version', '.go-version');
+        }
+        if (toolPinned(['golang', 'go'])) {
+            return pass('Go version pinned: .tool-versions', '.tool-versions');
+        }
+        return missing;
+    }
+    const toolchain = await findInRepo(repoPath, [
+        'rust-toolchain.toml',
+        'rust-toolchain',
+    ]);
+    if (toolchain.length > 0) {
+        return pass(`Rust toolchain pinned: ${toolchain[0]}`, toolchain[0]);
+    }
+    for (const rel of ecosystems.manifests.rust ?? []) {
+        const content = await readTextFile_readTextFile(external_node_path_default().join(repoPath, rel));
+        if (content && /^[ \t]*rust-version[ \t]*=/m.test(content)) {
+            return pass(`Rust version constrained via ${rel}`, rel);
+        }
+    }
+    if (toolPinned(['rust'])) {
+        return pass('Rust version pinned: .tool-versions', '.tool-versions');
+    }
+    return missing;
 }
 
 ;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/audit/checks/architecture.ts
+
 
 
 
@@ -40573,7 +41538,7 @@ async function checkArchitecture(repoPath) {
         }
     }
     if (archDocRel &&
-        (await fileHasPlaceholderContent(external_node_path_default().join(repoPath, archDocRel)))) {
+        containsPlaceholderContent((await readRoot(repoPath, archDocRel)) ?? '')) {
         findings.push({
             status: 'warn',
             message: `${PLACEHOLDER_WARNING} (${archDocRel})`,
@@ -40605,8 +41570,7 @@ async function checkArchitecture(repoPath) {
     const packagesDir = external_node_path_default().join(repoPath, 'packages');
     const hasApps = await dirExists(appsDir);
     const hasPackages = await dirExists(packagesDir);
-    const pkgPath = external_node_path_default().join(repoPath, 'package.json');
-    const pkg = await readJsonFile(pkgPath);
+    const pkg = await readRootJson(repoPath, 'package.json');
     const hasWorkspaces = pkg?.workspaces !== undefined &&
         (Array.isArray(pkg.workspaces) ? pkg.workspaces.length > 0 : true);
     if (hasApps && hasPackages) {
@@ -40623,6 +41587,17 @@ async function checkArchitecture(repoPath) {
             status: 'pass',
             message: 'pnpm/npm workspace configured in package.json',
         });
+    }
+    else {
+        const workspace = await findWorkspaceConfig(repoPath);
+        if (workspace) {
+            score = Math.min(architecture_MAX_SCORE, score + 2);
+            findings.push({
+                status: 'pass',
+                message: `Workspace configured: ${workspace}`,
+                files: [workspace.split(' ')[0]],
+            });
+        }
     }
     score = Math.min(architecture_MAX_SCORE, score);
     if (score >= 12) {
@@ -40668,58 +41643,125 @@ const SCRIPT_POINTS = {
     format: 1,
     clean: 1,
 };
-async function checkWorkflow(repoPath) {
+/**
+ * Names that fill each role in task runners other than package.json. npm
+ * scripts keep their exact names, as before. `test`, `lint`, `typecheck`,
+ * `build`, and `format` also match prefixed names such as `test-unit`.
+ */
+const ROLE_ALIASES = {
+    dev: ['dev', 'run', 'serve', 'start', 'watch'],
+    build: ['build', 'compile'],
+    lint: ['lint', 'vet', 'clippy'],
+    test: ['test', 'tests'],
+    typecheck: ['typecheck', 'type-check', 'types', 'mypy', 'pyright'],
+    format: ['format', 'fmt'],
+    clean: ['clean'],
+};
+const PREFIX_ROLES = new Set([
+    'build',
+    'lint',
+    'test',
+    'typecheck',
+    'format',
+]);
+/** Ecosystems whose compiler type-checks during a build. */
+const COMPILED = new Set(['go', 'rust']);
+const TASK_RUNNER_LIST = 'package.json scripts, Makefile, justfile, Taskfile, pyproject.toml tasks, tox.ini, or noxfile.py';
+function commandFillsRole(source, name, role) {
+    if (isPackageJsonSource(source))
+        return name === role;
+    const lower = name.toLowerCase();
+    return ROLE_ALIASES[role].some((alias) => lower === alias ||
+        (PREFIX_ROLES.has(role) &&
+            (lower.startsWith(`${alias}-`) ||
+                lower.startsWith(`${alias}_`) ||
+                lower.startsWith(`${alias}:`))));
+}
+/** First source and command name that fills `role`, if any. */
+function findRoleCommand(sources, role) {
+    for (const { source, names } of sources) {
+        const name = names.find((n) => commandFillsRole(source, n, role));
+        if (name !== undefined)
+            return { source, name };
+    }
+    return null;
+}
+async function checkWorkflow(repoPath, detected) {
+    const ecosystems = detected ?? (await detectEcosystems(repoPath));
+    const sources = await readTaskSources(repoPath, ecosystems.manifests.node ?? []);
+    const npmOnly = sources.every((s) => s.source === 'package.json');
+    if (sources.length === 0) {
+        const message = ecosystems.ids.length === 1 && ecosystems.ids[0] === 'node'
+            ? 'No package.json scripts found'
+            : `No task runner commands found (${TASK_RUNNER_LIST})`;
+        return result(0, [{ status: 'fail', message }]);
+    }
+    const found = new Map();
+    for (const role of ALL_SCRIPTS) {
+        const hit = findRoleCommand(sources, role);
+        if (hit)
+            found.set(role, hit);
+    }
     const findings = [];
-    const pkgPath = external_node_path_default().join(repoPath, 'package.json');
-    const pkg = await readJsonFile(pkgPath);
-    const scripts = pkg?.scripts ?? {};
-    if (Object.keys(scripts).length === 0) {
-        return {
-            id: 'workflow',
-            label: 'Developer workflow clarity',
-            score: 0,
-            maxScore: workflow_MAX_SCORE,
-            findings: [{ status: 'fail', message: 'No package.json scripts found' }],
-        };
-    }
-    const present = [];
-    const missing = [];
-    for (const name of ALL_SCRIPTS) {
-        if (scripts[name]) {
-            present.push(name);
-        }
-        else {
-            missing.push(name);
-        }
-    }
-    let score = 0;
-    for (const name of ALL_SCRIPTS) {
-        if (scripts[name])
-            score += SCRIPT_POINTS[name];
-    }
-    score = Math.min(workflow_MAX_SCORE, score);
-    findings.push({
-        status: 'pass',
-        message: `Scripts present: ${present.join(', ') || 'none'}`,
-        files: present.map((s) => `package.json#scripts.${s}`),
-    });
-    if (!scripts.test) {
+    const present = ALL_SCRIPTS.filter((r) => found.has(r));
+    if (npmOnly) {
         findings.push({
-            status: 'fail',
-            message: 'Missing test script — agents need a clear test command',
+            status: 'pass',
+            message: `Scripts present: ${present.join(', ') || 'none'}`,
+            files: present.map((s) => `package.json#scripts.${s}`),
         });
     }
-    if (!scripts.typecheck) {
+    else {
+        findings.push({
+            status: 'pass',
+            message: `Commands present: ${present.map((r) => `${r} (${found.get(r)?.source})`).join(', ') ||
+                'none'}`,
+            files: present.map((r) => {
+                const hit = found.get(r);
+                return hit && isPackageJsonSource(hit.source)
+                    ? `${hit.source}#scripts.${hit.name}`
+                    : `${hit?.source}#${hit?.name}`;
+            }),
+        });
+    }
+    // Go and Rust compile with type checking, so a build command covers it.
+    const compiledOnly = ecosystems.ids.length > 0 && ecosystems.ids.every((id) => COMPILED.has(id));
+    let typecheckViaBuild = false;
+    if (!found.has('typecheck') && found.has('build') && compiledOnly) {
+        typecheckViaBuild = true;
+        findings.push({
+            status: 'pass',
+            message: `Type checking runs in the build command (${found.get('build')?.source})`,
+        });
+    }
+    let score = 0;
+    for (const role of ALL_SCRIPTS) {
+        if (found.has(role) || (role === 'typecheck' && typecheckViaBuild)) {
+            score += SCRIPT_POINTS[role];
+        }
+    }
+    score = Math.min(workflow_MAX_SCORE, score);
+    const noun = npmOnly ? 'script' : 'command';
+    if (!found.has('test')) {
+        findings.push({
+            status: 'fail',
+            message: `Missing test ${noun} — agents need a clear test command`,
+        });
+    }
+    if (!found.has('typecheck') && !typecheckViaBuild) {
         findings.push({
             status: 'warn',
-            message: 'Missing typecheck script — recommend adding explicit typecheck',
+            message: `Missing typecheck ${noun} — recommend adding explicit typecheck`,
         });
     }
     for (const name of ['dev', 'build', 'lint']) {
-        if (!scripts[name]) {
-            findings.push({ status: 'warn', message: `Missing script: ${name}` });
+        if (!found.has(name)) {
+            findings.push({ status: 'warn', message: `Missing ${noun}: ${name}` });
         }
     }
+    return result(score, findings);
+}
+function result(score, findings) {
     return {
         id: 'workflow',
         label: 'Developer workflow clarity',
@@ -40734,7 +41776,11 @@ async function checkWorkflow(repoPath) {
 
 
 
+
+
+
 const testing_MAX_SCORE = 15;
+const RUNNER_POINTS = 4;
 const TEST_CONFIG_PATTERNS = [
     'vitest.config.*',
     '**/vitest.config.*',
@@ -40745,53 +41791,94 @@ const TEST_CONFIG_PATTERNS = [
     'cypress.config.*',
     '**/cypress.config.*',
 ];
-const TEST_FILE_PATTERNS = [
-    '**/*.test.ts',
-    '**/*.test.tsx',
-    '**/*.test.js',
-    '**/*.spec.ts',
-    '**/*.spec.tsx',
-    '**/*.spec.js',
-    'tests/**/*',
-    'test/**/*',
-    '__tests__/**/*',
-];
-async function checkTesting(repoPath) {
+const NODE_RUNNER_MISSING = 'No vitest/jest/playwright/cypress config found';
+const PYTHON_RUNNER_MISSING = 'No pytest configuration found (pytest.ini, conftest.py, [tool.pytest.ini_options], tox.ini, or noxfile.py)';
+async function checkTesting(repoPath, detected) {
+    const ecosystems = detected ?? (await detectEcosystems(repoPath));
     const findings = [];
     let score = 0;
-    const testFiles = await findFiles(repoPath, TEST_FILE_PATTERNS);
+    // 1. Tests exist.
+    const { files: testFiles, languages } = await findTestFiles(repoPath);
     if (testFiles.length > 0) {
         score += 5;
         findings.push({
             status: 'pass',
-            message: `Test files found (${testFiles.length})`,
+            message: `Test files found (${testFiles.length}): ${languages.join(', ')}`,
             files: testFiles.slice(0, 10).map((f) => external_node_path_default().relative(repoPath, f)),
         });
     }
     else {
         findings.push({ status: 'fail', message: 'No test files detected' });
     }
-    const configs = await findFiles(repoPath, TEST_CONFIG_PATTERNS);
-    if (configs.length > 0) {
-        score += 4;
-        findings.push({
-            status: 'pass',
-            message: 'Test runner config found',
-            files: configs.map((f) => external_node_path_default().relative(repoPath, f)),
-        });
-    }
-    else {
-        findings.push({
-            status: 'warn',
-            message: 'No vitest/jest/playwright/cypress config found',
-        });
-    }
-    const ciWorkflows = await findFiles(repoPath, '.github/workflows/*.{yml,yaml}');
-    const hasCi = ciWorkflows.some((f) => {
-        const name = external_node_path_default().basename(f).toLowerCase();
-        return (name.includes('test') || name.includes('ci') || name.includes('build'));
+    // 2. A test runner is configured for each detected ecosystem.
+    const nodeConfigs = async () => {
+        const configs = await findFiles(repoPath, TEST_CONFIG_PATTERNS);
+        return configs.length > 0
+            ? {
+                satisfied: true,
+                passMessage: 'Test runner config found',
+                files: configs.map((f) => external_node_path_default().relative(repoPath, f)),
+            }
+            : { satisfied: false, missingMessage: NODE_RUNNER_MISSING };
+    };
+    const pythonConfigs = async () => {
+        const files = await findPytestConfig(repoPath);
+        return files.length > 0
+            ? {
+                satisfied: true,
+                passMessage: 'Python test runner config found (pytest/tox/nox)',
+                files,
+            }
+            : { satisfied: false, missingMessage: PYTHON_RUNNER_MISSING };
+    };
+    const builtIn = (id) => {
+        const runner = id === 'go' ? 'go test' : 'cargo test';
+        const hasTests = languages.includes(ECOSYSTEM_LABELS[id]);
+        return hasTests
+            ? {
+                satisfied: true,
+                passMessage: `${ECOSYSTEM_LABELS[id]} tests run with the built-in runner (${runner})`,
+            }
+            : {
+                satisfied: false,
+                missingMessage: `No ${ECOSYSTEM_LABELS[id]} tests for ${runner} to run`,
+            };
+    };
+    const evaluateRunner = async (id) => {
+        if (id === 'node')
+            return nodeConfigs();
+        if (id === 'python')
+            return pythonConfigs();
+        return builtIn(id);
+    };
+    const runner = await scoreEcosystemSignal(ecosystems, RUNNER_POINTS, evaluateRunner, async () => {
+        const node = await nodeConfigs();
+        if (node.satisfied)
+            return node;
+        const python = await pythonConfigs();
+        if (python.satisfied)
+            return python;
+        return {
+            satisfied: false,
+            missingMessage: 'No test runner config found (vitest, jest, playwright, cypress, or pytest)',
+        };
     });
-    if (hasCi || ciWorkflows.length > 0) {
+    score += runner.points;
+    for (const { evaluation } of runner.results) {
+        findings.push(evaluation.satisfied
+            ? {
+                status: 'pass',
+                message: evaluation.passMessage ?? 'Test runner configured',
+                ...(evaluation.files ? { files: evaluation.files } : {}),
+            }
+            : {
+                status: 'warn',
+                message: evaluation.missingMessage ?? 'No test runner config',
+            });
+    }
+    // 3. Tests are verified in CI.
+    const ciWorkflows = await findFiles(repoPath, '.github/workflows/*.{yml,yaml}');
+    if (ciWorkflows.length > 0) {
         score += 3;
         findings.push({
             status: 'pass',
@@ -40805,11 +41892,14 @@ async function checkTesting(repoPath) {
             message: 'No CI workflow in .github/workflows',
         });
     }
-    const pkg = await readJsonFile(external_node_path_default().join(repoPath, 'package.json'));
+    // 4. A test command is defined (package.json script or task runner target).
+    const pkg = await readRootJson(repoPath, 'package.json');
     const scripts = pkg?.scripts ?? {};
     const hasTestScript = Boolean(scripts.test) ||
         Boolean(scripts['test:unit']) ||
         Boolean(scripts['test:e2e']);
+    const sources = await readTaskSources(repoPath, ecosystems.manifests.node ?? []);
+    const runnerTest = findRoleCommand(sources.filter((s) => s.source !== 'package.json'), 'test');
     if (hasTestScript) {
         score += 2;
         findings.push({
@@ -40817,44 +41907,26 @@ async function checkTesting(repoPath) {
             message: 'package.json test script defined',
         });
     }
-    else {
+    else if (runnerTest) {
+        score += 2;
         findings.push({
-            status: 'warn',
-            message: 'No test script in package.json',
+            status: 'pass',
+            message: `Test command defined: ${runnerTest.name} (${runnerTest.source})`,
+            files: [runnerTest.source],
         });
     }
-    const coverageFiles = await findFiles(repoPath, [
-        'codecov.yml',
-        '.codecov.yml',
-        '**/c8.config.*',
-    ]);
-    const vitestConfig = await findFiles(repoPath, 'vitest.config.*');
-    let hasCoverage = coverageFiles.length > 0;
-    let coverageSource = '';
-    if (!hasCoverage && vitestConfig.length > 0) {
-        hasCoverage = true;
-        coverageSource = 'vitest';
+    else {
+        const nodeOnly = ecosystems.ids.length === 1 && ecosystems.ids[0] === 'node';
+        findings.push({
+            status: 'warn',
+            message: nodeOnly
+                ? 'No test script in package.json'
+                : `No test command defined (${TASK_RUNNER_LIST})`,
+        });
     }
-    // Detect coverage configured inside jest.config.* files
-    if (!hasCoverage) {
-        const jestConfigs = await findFiles(repoPath, [
-            'jest.config.*',
-            '**/jest.config.*',
-        ]);
-        for (const f of jestConfigs) {
-            const src = await readTextFile_readTextFile(f);
-            if (src !== null &&
-                (src.includes('collectCoverage') ||
-                    src.includes('coverageProvider') ||
-                    src.includes('coverageThreshold') ||
-                    src.includes('coverageDirectory'))) {
-                hasCoverage = true;
-                coverageSource = 'jest';
-                break;
-            }
-        }
-    }
-    if (hasCoverage) {
+    // 5. Coverage is configured.
+    const coverageSource = await findCoverage(repoPath);
+    if (coverageSource !== null) {
         score += 1;
         findings.push({
             status: 'pass',
@@ -40869,6 +41941,87 @@ async function checkTesting(repoPath) {
         maxScore: testing_MAX_SCORE,
         findings,
     };
+}
+/** Upper bound on nested pyproject.toml / setup.cfg files read for pytest config. */
+const MAX_PYTHON_CONFIGS_READ = 50;
+async function findPytestConfig(repoPath) {
+    const files = await findInRepo(repoPath, [
+        '**/pytest.ini',
+        '**/conftest.py',
+        '**/tox.ini',
+        '**/noxfile.py',
+    ]);
+    for (const rel of (await findInRepo(repoPath, '**/pyproject.toml')).slice(0, MAX_PYTHON_CONFIGS_READ)) {
+        const content = await readTextFile_readTextFile(external_node_path_default().join(repoPath, rel));
+        if (content && hasTomlTable(tomlTables(content), 'tool.pytest')) {
+            files.push(rel);
+        }
+    }
+    for (const rel of (await findInRepo(repoPath, '**/setup.cfg')).slice(0, MAX_PYTHON_CONFIGS_READ)) {
+        const content = await readTextFile_readTextFile(external_node_path_default().join(repoPath, rel));
+        if (content && iniSections(content).includes('tool:pytest')) {
+            files.push(rel);
+        }
+    }
+    return [...new Set(files)].sort();
+}
+/**
+ * Returns the coverage tool label ('' when the file name says enough), or
+ * null when no coverage configuration is found.
+ */
+async function findCoverage(repoPath) {
+    const coverageFiles = await findFiles(repoPath, [
+        'codecov.yml',
+        '.codecov.yml',
+        '**/c8.config.*',
+    ]);
+    if (coverageFiles.length > 0)
+        return '';
+    if ((await findFiles(repoPath, 'vitest.config.*')).length > 0) {
+        return 'vitest';
+    }
+    const jestConfigs = await findFiles(repoPath, [
+        'jest.config.*',
+        '**/jest.config.*',
+    ]);
+    for (const f of jestConfigs) {
+        const src = await readTextFile_readTextFile(f);
+        if (src !== null &&
+            (src.includes('collectCoverage') ||
+                src.includes('coverageProvider') ||
+                src.includes('coverageThreshold') ||
+                src.includes('coverageDirectory'))) {
+            return 'jest';
+        }
+    }
+    if ((await findInRepo(repoPath, '**/.coveragerc')).length > 0) {
+        return 'coverage.py';
+    }
+    const pyproject = await readRoot(repoPath, 'pyproject.toml');
+    if (pyproject && hasTomlTable(tomlTables(pyproject), 'tool.coverage')) {
+        return 'coverage.py';
+    }
+    const setupCfg = await readRoot(repoPath, 'setup.cfg');
+    if (setupCfg &&
+        iniSections(setupCfg).some((s) => s.startsWith('coverage:'))) {
+        return 'coverage.py';
+    }
+    if ((await findInRepo(repoPath, ['tarpaulin.toml', '.tarpaulin.toml'])).length >
+        0) {
+        return 'tarpaulin';
+    }
+    const automation = await readAutomationText(repoPath);
+    const goCover = automation
+        .split('\n')
+        .some((line) => line.includes('-coverprofile') ||
+        (line.includes('go test') && /\s-cover\b/.test(line)));
+    if (goCover)
+        return 'go test -cover';
+    if (/\bcargo (?:tarpaulin|llvm-cov)\b/.test(automation))
+        return 'cargo';
+    if (/--cov\b|--cov=|\bcoverage run\b/.test(automation))
+        return 'pytest-cov';
+    return null;
 }
 
 ;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/audit/checks/safety.ts
@@ -41338,233 +42491,67 @@ async function checkPromptAssets(repoPath) {
     };
 }
 
-;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/audit/checks/dependencies.ts
-
-
-
-
-const dependencies_MAX_SCORE = 10;
-async function checkDependencies(repoPath) {
-    const findings = [];
-    let score = 0;
-    // Lockfile
-    const lockfiles = [
-        { rel: 'pnpm-lock.yaml', label: 'pnpm-lock.yaml' },
-        { rel: 'package-lock.json', label: 'package-lock.json' },
-        { rel: 'yarn.lock', label: 'yarn.lock' },
-        { rel: 'bun.lockb', label: 'bun.lockb' },
-    ];
-    let foundLockfile = null;
-    for (const { rel, label } of lockfiles) {
-        if (await fileExists(external_node_path_default().join(repoPath, rel))) {
-            foundLockfile = label;
-            break;
-        }
-    }
-    if (foundLockfile) {
-        score += 3;
-        findings.push({
-            status: 'pass',
-            message: `Lockfile present: ${foundLockfile}`,
-            files: [foundLockfile],
-        });
-    }
-    else {
-        findings.push({
-            status: 'fail',
-            message: 'No lockfile found (pnpm-lock.yaml / package-lock.json / yarn.lock)',
-        });
-    }
-    // Node version pin
-    const nodeVersionFiles = ['.nvmrc', '.node-version', '.tool-versions'];
-    let foundNodePin = null;
-    for (const rel of nodeVersionFiles) {
-        if (await fileExists(external_node_path_default().join(repoPath, rel))) {
-            foundNodePin = rel;
-            break;
-        }
-    }
-    const pkg = await readJsonFile(external_node_path_default().join(repoPath, 'package.json'));
-    const hasEngines = pkg?.engines && Object.keys(pkg.engines).length > 0;
-    if (foundNodePin) {
-        score += 2;
-        findings.push({
-            status: 'pass',
-            message: `Node version pinned: ${foundNodePin}`,
-            files: [foundNodePin],
-        });
-    }
-    else if (hasEngines) {
-        score += 2;
-        findings.push({
-            status: 'pass',
-            message: 'Node version constrained via package.json engines field',
-            files: ['package.json'],
-        });
-    }
-    else {
-        findings.push({
-            status: 'warn',
-            message: 'No Node.js version pin (.nvmrc, .node-version, or engines in package.json)',
-        });
-    }
-    // Dependabot or Renovate
-    const depbotPaths = ['.github/dependabot.yml', '.github/dependabot.yaml'];
-    let foundDepbot = null;
-    for (const rel of depbotPaths) {
-        if (await fileExists(external_node_path_default().join(repoPath, rel))) {
-            foundDepbot = rel;
-            break;
-        }
-    }
-    const renovateFiles = await findFiles(repoPath, [
-        'renovate.json',
-        'renovate.json5',
-        '.renovaterc',
-        '.renovaterc.json',
-    ]);
-    if (foundDepbot) {
-        score += 3;
-        findings.push({
-            status: 'pass',
-            message: `Dependabot config found: ${foundDepbot}`,
-            files: [foundDepbot],
-        });
-    }
-    else if (renovateFiles.length > 0) {
-        score += 3;
-        findings.push({
-            status: 'pass',
-            message: 'Renovate config found',
-            files: renovateFiles.map((f) => external_node_path_default().relative(repoPath, f)).slice(0, 3),
-        });
-    }
-    else {
-        findings.push({
-            status: 'warn',
-            message: 'No automated dependency update config (dependabot.yml or renovate.json)',
-        });
-    }
-    // .npmrc or .pnpmfile.cjs — registry / workspace config
-    const registryFiles = ['.npmrc', '.pnpmfile.cjs'];
-    for (const rel of registryFiles) {
-        if (await fileExists(external_node_path_default().join(repoPath, rel))) {
-            score += 1;
-            findings.push({
-                status: 'pass',
-                message: `Package manager config: ${rel}`,
-                files: [rel],
-            });
-            break;
-        }
-    }
-    // Workspaces root — check for monorepo package manager config
-    const hasWorkspaceRoot = (await dirExists(external_node_path_default().join(repoPath, 'packages'))) ||
-        (await dirExists(external_node_path_default().join(repoPath, 'apps')));
-    const hasPnpmWorkspace = await fileExists(external_node_path_default().join(repoPath, 'pnpm-workspace.yaml'));
-    if (hasWorkspaceRoot && hasPnpmWorkspace) {
-        score += 1;
-        findings.push({
-            status: 'pass',
-            message: 'pnpm-workspace.yaml present in monorepo',
-            files: ['pnpm-workspace.yaml'],
-        });
-    }
-    score = Math.min(dependencies_MAX_SCORE, score);
-    if (score === 0) {
-        findings.push({
-            status: 'fail',
-            message: 'No dependency hygiene signals detected',
-        });
-    }
-    else if (score < 5) {
-        findings.push({
-            status: 'warn',
-            message: 'Limited dependency hygiene configuration',
-        });
-    }
-    return {
-        id: 'dependencies',
-        label: 'Dependency hygiene',
-        score,
-        maxScore: dependencies_MAX_SCORE,
-        findings,
-    };
-}
-
 ;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/audit/checks/codeStyle.ts
 
 
 
+
+
+
 const codeStyle_MAX_SCORE = 10;
-async function checkCodeStyle(repoPath) {
+const LINTER_POINTS = 3;
+const FORMATTER_POINTS = 3;
+const ESLINT_FILES = [
+    '.eslintrc',
+    '.eslintrc.js',
+    '.eslintrc.cjs',
+    '.eslintrc.mjs',
+    '.eslintrc.json',
+    '.eslintrc.yml',
+    '.eslintrc.yaml',
+    'eslint.config.js',
+    'eslint.config.mjs',
+    'eslint.config.cjs',
+    'eslint.config.ts',
+];
+const PRETTIER_FILES = [
+    '.prettierrc',
+    '.prettierrc.js',
+    '.prettierrc.cjs',
+    '.prettierrc.mjs',
+    '.prettierrc.json',
+    '.prettierrc.yml',
+    '.prettierrc.yaml',
+    '.prettierrc.toml',
+    'prettier.config.js',
+    'prettier.config.cjs',
+    'prettier.config.mjs',
+    'prettier.config.ts',
+];
+const LINTER_MISSING = {
+    node: 'No ESLint config detected',
+    python: 'No Python linter config detected (ruff, flake8, or pylint)',
+    go: 'No Go linter detected (.golangci.yml, or go vet / staticcheck in a task or CI)',
+    rust: 'No Rust linter detected (clippy config, [lints.clippy], or cargo clippy in a task or CI)',
+};
+const FORMATTER_MISSING = {
+    node: 'No Prettier config detected',
+    python: 'No Python formatter detected (ruff format or black)',
+    go: 'No Go formatter step detected (gofmt, gofumpt, or goimports in a task, hook, or CI)',
+    rust: 'No Rust formatter detected (rustfmt.toml, or cargo fmt in a task, hook, or CI)',
+};
+async function checkCodeStyle(repoPath, detected) {
     const findings = [];
     let score = 0;
-    // ESLint
-    const eslintFiles = [
-        '.eslintrc',
-        '.eslintrc.js',
-        '.eslintrc.cjs',
-        '.eslintrc.mjs',
-        '.eslintrc.json',
-        '.eslintrc.yml',
-        '.eslintrc.yaml',
-        'eslint.config.js',
-        'eslint.config.mjs',
-        'eslint.config.cjs',
-        'eslint.config.ts',
-    ];
-    let foundEslint = null;
-    for (const rel of eslintFiles) {
-        if (await fileExists(external_node_path_default().join(repoPath, rel))) {
-            foundEslint = rel;
-            break;
-        }
-    }
-    if (foundEslint) {
-        score += 3;
-        findings.push({
-            status: 'pass',
-            message: `ESLint config found: ${foundEslint}`,
-            files: [foundEslint],
-        });
-    }
-    else {
-        findings.push({ status: 'warn', message: 'No ESLint config detected' });
-    }
-    // Prettier
-    const prettierFiles = [
-        '.prettierrc',
-        '.prettierrc.js',
-        '.prettierrc.cjs',
-        '.prettierrc.mjs',
-        '.prettierrc.json',
-        '.prettierrc.yml',
-        '.prettierrc.yaml',
-        '.prettierrc.toml',
-        'prettier.config.js',
-        'prettier.config.cjs',
-        'prettier.config.mjs',
-        'prettier.config.ts',
-    ];
-    let foundPrettier = null;
-    for (const rel of prettierFiles) {
-        if (await fileExists(external_node_path_default().join(repoPath, rel))) {
-            foundPrettier = rel;
-            break;
-        }
-    }
-    if (foundPrettier) {
-        score += 3;
-        findings.push({
-            status: 'pass',
-            message: `Prettier config found: ${foundPrettier}`,
-            files: [foundPrettier],
-        });
-    }
-    else {
-        findings.push({ status: 'warn', message: 'No Prettier config detected' });
-    }
+    const ecosystems = detected ?? (await detectEcosystems(repoPath));
+    const automation = await readAutomationText(repoPath);
+    const pyTables = await pyprojectTables(repoPath);
+    const linters = await scoreEcosystemSignal(ecosystems, LINTER_POINTS, (id) => evaluateLinter(repoPath, id, automation, pyTables), () => codeStyle_anyEcosystem((id) => evaluateLinter(repoPath, id, automation, pyTables)));
+    score += linters.points;
+    pushResults(findings, linters.results, 'linter');
+    const formatters = await scoreEcosystemSignal(ecosystems, FORMATTER_POINTS, (id) => evaluateFormatter(repoPath, id, automation, pyTables), () => codeStyle_anyEcosystem((id) => evaluateFormatter(repoPath, id, automation, pyTables)));
+    score += formatters.points;
+    pushResults(findings, formatters.results, 'formatter');
     // .editorconfig
     if (await fileExists(external_node_path_default().join(repoPath, '.editorconfig'))) {
         score += 2;
@@ -41601,9 +42588,13 @@ async function checkCodeStyle(repoPath) {
     }
     score = Math.min(codeStyle_MAX_SCORE, score);
     if (score === 0) {
+        const nodeOrUnknown = ecosystems.ids.length === 0 ||
+            (ecosystems.ids.length === 1 && ecosystems.ids[0] === 'node');
         findings.push({
             status: 'fail',
-            message: 'No code style tooling detected (ESLint / Prettier / Biome / .editorconfig)',
+            message: nodeOrUnknown
+                ? 'No code style tooling detected (ESLint / Prettier / Biome / .editorconfig)'
+                : 'No code style tooling detected (linter, formatter, or .editorconfig)',
         });
     }
     return {
@@ -41613,6 +42604,170 @@ async function checkCodeStyle(repoPath) {
         maxScore: codeStyle_MAX_SCORE,
         findings,
     };
+}
+async function pyprojectTables(repoPath) {
+    const content = await readRoot(repoPath, 'pyproject.toml');
+    return content === null ? null : tomlTables(content);
+}
+/** Root config first (as before), then configs in nested packages. */
+async function findConfig(repoPath, names) {
+    for (const rel of names) {
+        if (await repoFileExists(repoPath, rel))
+            return rel;
+    }
+    const nested = await findInRepo(repoPath, names.map((n) => `**/${n}`));
+    return nested[0] ?? null;
+}
+async function evaluateLinter(repoPath, id, automation, pyTables) {
+    const pass = (message, file) => ({
+        satisfied: true,
+        passMessage: message,
+        ...(file ? { files: [file] } : {}),
+    });
+    const missing = { satisfied: false, missingMessage: LINTER_MISSING[id] };
+    if (id === 'node') {
+        const eslint = await findConfig(repoPath, ESLINT_FILES);
+        return eslint ? pass(`ESLint config found: ${eslint}`, eslint) : missing;
+    }
+    if (id === 'python') {
+        const file = await findConfig(repoPath, [
+            'ruff.toml',
+            '.ruff.toml',
+            '.flake8',
+            '.pylintrc',
+            'pylintrc',
+        ]);
+        if (file)
+            return pass(`Python linter config found: ${file}`, file);
+        if (pyTables) {
+            for (const table of ['tool.ruff', 'tool.pylint', 'tool.flake8']) {
+                if (hasTomlTable(pyTables, table)) {
+                    return pass(`Python linter config found: pyproject.toml [${table}]`, 'pyproject.toml');
+                }
+            }
+        }
+        for (const rel of ['setup.cfg', 'tox.ini']) {
+            const content = await readRoot(repoPath, rel);
+            if (content && iniSections(content).includes('flake8')) {
+                return pass(`Python linter config found: ${rel} [flake8]`, rel);
+            }
+        }
+        if (/\bruff check\b|\bflake8\b|\bpylint\b/.test(automation)) {
+            return pass('Python linter runs in a task, hook, or CI');
+        }
+        return missing;
+    }
+    if (id === 'go') {
+        const file = await findConfig(repoPath, [
+            '.golangci.yml',
+            '.golangci.yaml',
+            '.golangci.toml',
+            '.golangci.json',
+        ]);
+        if (file)
+            return pass(`golangci-lint config found: ${file}`, file);
+        if (/\bgolangci-lint\b|\bgo vet\b|\bstaticcheck\b/.test(automation)) {
+            return pass('Go linter runs in a task, hook, or CI');
+        }
+        return missing;
+    }
+    const clippy = await findConfig(repoPath, ['clippy.toml', '.clippy.toml']);
+    if (clippy)
+        return pass(`Clippy config found: ${clippy}`, clippy);
+    const cargo = await readRoot(repoPath, 'Cargo.toml');
+    if (cargo &&
+        (hasTomlTable(tomlTables(cargo), 'lints.clippy') ||
+            hasTomlTable(tomlTables(cargo), 'workspace.lints.clippy'))) {
+        return pass('Clippy lints configured in Cargo.toml', 'Cargo.toml');
+    }
+    if (/\bcargo clippy\b|\bclippy\b/.test(automation)) {
+        return pass('Clippy runs in a task, hook, or CI');
+    }
+    return missing;
+}
+async function evaluateFormatter(repoPath, id, automation, pyTables) {
+    const pass = (message, file) => ({
+        satisfied: true,
+        passMessage: message,
+        ...(file ? { files: [file] } : {}),
+    });
+    const missing = { satisfied: false, missingMessage: FORMATTER_MISSING[id] };
+    if (id === 'node') {
+        const prettier = await findConfig(repoPath, PRETTIER_FILES);
+        return prettier
+            ? pass(`Prettier config found: ${prettier}`, prettier)
+            : missing;
+    }
+    if (id === 'python') {
+        if (pyTables) {
+            for (const table of ['tool.black', 'tool.ruff.format']) {
+                if (hasTomlTable(pyTables, table)) {
+                    return pass(`Python formatter config found: pyproject.toml [${table}]`, 'pyproject.toml');
+                }
+            }
+        }
+        for (const rel of ['ruff.toml', '.ruff.toml']) {
+            const content = await readRoot(repoPath, rel);
+            if (content && hasTomlTable(tomlTables(content), 'format')) {
+                return pass(`Python formatter config found: ${rel} [format]`, rel);
+            }
+        }
+        if (/\bruff format\b|\bruff-format\b|psf\/black|(?:^|[\s"'])black(?:\s|$)/m.test(automation)) {
+            return pass('Python formatter runs in a task, hook, or CI');
+        }
+        return missing;
+    }
+    if (id === 'go') {
+        if (/\bgofmt\b|\bgo fmt\b|\bgofumpt\b|\bgoimports\b/.test(automation)) {
+            return pass('Go formatter runs in a task, hook, or CI');
+        }
+        const golangci = await findConfig(repoPath, [
+            '.golangci.yml',
+            '.golangci.yaml',
+            '.golangci.toml',
+        ]);
+        // findConfig found it through findFiles, so it is inside the repository.
+        const content = golangci
+            ? await readTextFile_readTextFile(external_node_path_default().join(repoPath, golangci))
+            : null;
+        if (content && /\b(gofmt|gofumpt|goimports)\b/.test(content)) {
+            return pass(`Go formatter enabled in ${golangci}`, golangci ?? undefined);
+        }
+        return missing;
+    }
+    const rustfmt = await findConfig(repoPath, ['rustfmt.toml', '.rustfmt.toml']);
+    if (rustfmt)
+        return pass(`rustfmt config found: ${rustfmt}`, rustfmt);
+    if (/\bcargo fmt\b|\brustfmt\b/.test(automation)) {
+        return pass('rustfmt runs in a task, hook, or CI');
+    }
+    return missing;
+}
+/** Fallback when no ecosystem is detected: any supported ecosystem's tool. */
+async function codeStyle_anyEcosystem(evaluate) {
+    let first = null;
+    for (const id of ECOSYSTEM_IDS) {
+        const evaluation = await evaluate(id);
+        if (evaluation.satisfied)
+            return evaluation;
+        first ??= evaluation;
+    }
+    // Unknown stacks report the Node.js wording, as before.
+    return first ?? { satisfied: false };
+}
+function pushResults(findings, results, kind) {
+    for (const { evaluation } of results) {
+        findings.push(evaluation.satisfied
+            ? {
+                status: 'pass',
+                message: evaluation.passMessage ?? `${kind} configured`,
+                ...(evaluation.files ? { files: evaluation.files } : {}),
+            }
+            : {
+                status: 'warn',
+                message: evaluation.missingMessage ?? `No ${kind} detected`,
+            });
+    }
 }
 
 ;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/audit/checks/documentation.ts
@@ -41634,8 +42789,7 @@ async function checkDocumentation(repoPath) {
     const findings = [];
     let score = 0;
     // README quality
-    const readmePath = external_node_path_default().join(repoPath, 'README.md');
-    const readmeContent = await readTextFile_readTextFile(readmePath);
+    const readmeContent = await readRoot(repoPath, 'README.md');
     if (readmeContent) {
         const lower = readmeContent.toLowerCase();
         const keywordsFound = README_QUALITY_KEYWORDS.filter((kw) => lower.includes(kw));
@@ -41751,23 +42905,50 @@ async function checkDocumentation(repoPath) {
 
 
 
+
 const gitHygiene_MAX_SCORE = 10;
-const GITIGNORE_QUALITY_PATTERNS = [
-    'node_modules',
-    'dist',
-    '.env',
-    '.DS_Store',
-];
-async function checkGitHygiene(repoPath) {
+const item = (label, ...alternatives) => ({
+    label,
+    alternatives: alternatives.length > 0 ? alternatives : [label],
+});
+const UNIVERSAL_ITEMS = [item('.env'), item('.DS_Store')];
+/**
+ * Dependency and build-output entries a .gitignore should cover, per
+ * ecosystem. Repositories with no detected ecosystem use the Node.js entries,
+ * as before.
+ */
+const ECOSYSTEM_ITEMS = {
+    node: [item('node_modules'), item('dist')],
+    python: [
+        item('__pycache__', '__pycache__', '*.pyc', '*.py[cod]'),
+        item('.venv', '.venv', 'venv'),
+    ],
+    go: [
+        item('Go binaries', '*.exe', '*.test', '/bin', 'bin/'),
+        item('Go coverage output', '*.out', 'coverage'),
+    ],
+    rust: [item('target'), item('debug', 'debug', '*.rs.bk', '*.pdb')],
+};
+function gitignoreItems(ids) {
+    const own = (ids.length > 0 ? ids : ['node']).flatMap((id) => ECOSYSTEM_ITEMS[id]);
+    // Node.js lists node_modules and dist first; keep that order for its report.
+    return ids.length === 0 || ids[0] === 'node'
+        ? [...own, ...UNIVERSAL_ITEMS]
+        : [...UNIVERSAL_ITEMS, ...own];
+}
+async function checkGitHygiene(repoPath, detected) {
+    const ecosystems = detected ?? (await detectEcosystems(repoPath));
     const findings = [];
     let score = 0;
     // .gitignore quality
-    const gitignorePath = external_node_path_default().join(repoPath, '.gitignore');
-    const gitignoreContent = await readTextFile_readTextFile(gitignorePath);
+    const gitignoreContent = await readRoot(repoPath, '.gitignore');
     if (gitignoreContent) {
         const lower = gitignoreContent.toLowerCase();
-        const hits = GITIGNORE_QUALITY_PATTERNS.filter((p) => lower.includes(p.toLowerCase()));
-        if (hits.length >= 3) {
+        const items = gitignoreItems(ecosystems.ids);
+        const covered = items.filter((i) => i.alternatives.some((a) => lower.includes(a.toLowerCase())));
+        const hits = covered.map((i) => i.label);
+        // Comprehensive: at most one expected entry missing (3 of 4 for one stack).
+        if (hits.length >= items.length - 1) {
             score += 3;
             findings.push({
                 status: 'pass',
@@ -41779,7 +42960,10 @@ async function checkGitHygiene(repoPath) {
             score += 2;
             findings.push({
                 status: 'warn',
-                message: `.gitignore exists but may be missing common entries (${GITIGNORE_QUALITY_PATTERNS.filter((p) => !lower.includes(p.toLowerCase())).join(', ')})`,
+                message: `.gitignore exists but may be missing common entries (${items
+                    .filter((i) => !covered.includes(i))
+                    .map((i) => i.label)
+                    .join(', ')})`,
                 files: ['.gitignore'],
             });
         }
@@ -41807,10 +42991,16 @@ async function checkGitHygiene(repoPath) {
         '.commitlintrc.json',
         '.commitlintrc.yml',
         '.commitlintrc.yaml',
+        // Commit message linters outside the Node.js toolchain
+        '.gitlint',
+        'cog.toml',
+        '.cz.toml',
+        '.cz.json',
+        '.cz.yaml',
     ];
     let foundCommitlint = null;
     for (const rel of commitlintFiles) {
-        if (await fileExists(external_node_path_default().join(repoPath, rel))) {
+        if (await repoFileExists(repoPath, rel)) {
             foundCommitlint = rel;
             break;
         }
@@ -41826,12 +43016,29 @@ async function checkGitHygiene(repoPath) {
     else {
         // Check for conventional-commits reference in package.json scripts or husky
         const huskyFiles = await findFiles(repoPath, '.husky/**/*');
+        const hookConfigs = await findFiles(repoPath, [
+            '.pre-commit-config.yaml',
+            '.pre-commit-config.yml',
+            'lefthook.yml',
+            'lefthook.yaml',
+            '.lefthook.yml',
+            '.githooks/*',
+        ]);
         if (huskyFiles.length > 0) {
             score += 1;
             findings.push({
                 status: 'pass',
                 message: 'Husky hooks directory found',
                 files: huskyFiles.map((f) => external_node_path_default().relative(repoPath, f)).slice(0, 3),
+            });
+        }
+        else if (hookConfigs.length > 0) {
+            score += 1;
+            const rel = external_node_path_default().relative(repoPath, hookConfigs[0]);
+            findings.push({
+                status: 'pass',
+                message: `Git hooks configured: ${rel}`,
+                files: [rel],
             });
         }
         else {
@@ -41859,10 +43066,14 @@ async function checkGitHygiene(repoPath) {
         '.release-it.yaml',
         'release.config.js',
         'release.config.cjs',
+        '.goreleaser.yml',
+        '.goreleaser.yaml',
+        'release-please-config.json',
+        'release.toml',
     ];
     let foundRelease = null;
     for (const rel of releaseFiles) {
-        if (await fileExists(external_node_path_default().join(repoPath, rel))) {
+        if (await repoFileExists(repoPath, rel)) {
             foundRelease = rel;
             break;
         }
@@ -42072,7 +43283,11 @@ function sumCategoryScores(categories) {
     const total = categories.reduce((sum, cat) => sum + cat.score, 0);
     return Math.min(100, total);
 }
-function buildMissingAndRecommendations(categories, repoPath) {
+function buildMissingAndRecommendations(categories, repoPath, ecosystems) {
+    // Recommend package.json changes only where Node.js is (or may be) in use.
+    const usesNode = ecosystems === undefined ||
+        ecosystems.length === 0 ||
+        ecosystems.includes('node');
     const missing = [];
     const recommendations = [];
     const add = (item, rec) => {
@@ -42101,7 +43316,11 @@ function buildMissingAndRecommendations(categories, repoPath) {
                     add('reusable QA prompt', 'Add docs/prompts/QA_AUDIT_PROMPT.md');
                 }
                 if (f.message.includes('test')) {
-                    add('test script or test files', 'Add tests and a package.json test script');
+                    add(usesNode
+                        ? 'test script or test files'
+                        : 'test command or test files', usesNode
+                        ? 'Add tests and a package.json test script'
+                        : 'Add tests and a test command (Makefile, justfile, Taskfile, or pyproject.toml task)');
                 }
             }
         }
@@ -42133,7 +43352,14 @@ function buildMissingAndRecommendations(categories, repoPath) {
         if (testFail) {
             add('package.json test script', 'Add a test script to package.json');
         }
-        const tcWarn = workflowCat.findings.some((f) => f.message.includes('Missing typecheck script'));
+        const testCommandFail = workflowCat.findings.some((f) => f.message.includes('Missing test command'));
+        if (testCommandFail) {
+            add('test command', usesNode
+                ? 'Add a test script to package.json or a test target to your task runner'
+                : 'Add a test target to your task runner (Makefile, justfile, Taskfile, or pyproject.toml)');
+        }
+        const tcWarn = workflowCat.findings.some((f) => f.message.includes('Missing typecheck script') ||
+            f.message.includes('Missing typecheck command'));
         if (tcWarn) {
             add('typecheck script', 'Add typecheck script for agent validation');
         }
@@ -42146,12 +43372,13 @@ function buildMissingAndRecommendations(categories, repoPath) {
     void repoPath;
     return { missing, recommendations };
 }
-function finalizeAuditResult(repoPath, categories) {
+function finalizeAuditResult(repoPath, categories, ecosystems) {
     const score = sumCategoryScores(categories);
-    const { missing, recommendations } = buildMissingAndRecommendations(categories, repoPath);
+    const { missing, recommendations } = buildMissingAndRecommendations(categories, repoPath, ecosystems);
     return {
         repoPath,
         score,
+        ...(ecosystems ? { ecosystems: [...ecosystems] } : {}),
         categories,
         missing,
         recommendations,
@@ -42159,6 +43386,7 @@ function finalizeAuditResult(repoPath, categories) {
 }
 
 ;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/audit/auditRepo.ts
+
 
 
 
@@ -42206,8 +43434,9 @@ const CHECK_MAP = {
 };
 async function auditRepo(repoPath) {
     const resolved = external_node_path_default().resolve(repoPath);
-    const categories = await Promise.all(ALL_CHECK_IDS.map((id) => CHECK_MAP[id](resolved)));
-    return finalizeAuditResult(resolved, categories);
+    const ecosystems = await detectEcosystems(resolved);
+    const categories = await Promise.all(ALL_CHECK_IDS.map((id) => CHECK_MAP[id](resolved, ecosystems)));
+    return finalizeAuditResult(resolved, categories, ecosystems.ids);
 }
 async function auditCategory(repoPath, categoryId) {
     const resolved = path.resolve(repoPath);
@@ -42275,6 +43504,7 @@ function codeSpan(value) {
 
 ;// CONCATENATED MODULE: ./vendor/agent-readiness-kit/src/report/markdownReport.ts
 
+
 function formatMarkdownReport(result) {
     const timestamp = new Date().toISOString();
     const lines = [];
@@ -42282,6 +43512,9 @@ function formatMarkdownReport(result) {
     lines.push('');
     lines.push(`**Repository:** ${codeSpan(result.repoPath)}`);
     lines.push(`**Score:** ${result.score} / 100`);
+    if (result.ecosystems) {
+        lines.push(`**Ecosystems:** ${escapeMarkdown(describeEcosystems(result.ecosystems))}`);
+    }
     lines.push(`**Generated:** ${timestamp}`);
     lines.push('');
     lines.push('## Category scores');
@@ -43032,7 +44265,21 @@ function checkSafetyBoundaries(filePath, content) {
 }
 
 ;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/checks/validationCommands.ts
-const VALIDATION_PATTERNS = [/\btest\b/i, /\blint\b/i, /typecheck/i, /\bbuild\b/i, /\bformat\b/i];
+const VALIDATION_PATTERNS = [
+    /\btest\b/i,
+    /\blint\b/i,
+    /typecheck/i,
+    /\bbuild\b/i,
+    /\bformat\b/i,
+    // Validation tools whose names do not contain one of the words above.
+    // Bare words such as "check" or "run" are not enough on their own.
+    /\b(?:pytest|unittest|mypy|pyright|ruff|flake8|tox)\b/i,
+    /\bgo\s+vet\b/i,
+    /\b(?:golangci-lint|staticcheck)\b/i,
+    /\bcargo\s+(?:check|clippy|fmt|nextest)\b/i,
+    /\bmake\s+(?:check|verify|ci)\b/i,
+    /\b(?:mvnw?|gradlew?)\s+(?:verify|check)\b/i,
+];
 function checkValidationCommands(filePath, content) {
     const hasValidation = VALIDATION_PATTERNS.some((p) => p.test(content));
     if (hasValidation)
@@ -43044,16 +44291,19 @@ function checkValidationCommands(filePath, content) {
             category: 'validation-commands',
             file: filePath,
             message: 'No validation commands mentioned',
-            recommendation: 'Add guidance on running tests, lint, typecheck, or build commands so agents can verify their work before finishing.',
+            recommendation: 'Add guidance on running tests, lint, typecheck, or build commands (for example `pnpm test`, `pytest`, `go test ./...`, or `cargo test`) so agents can verify their work before finishing.',
         },
     ];
 }
 
 ;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/checks/finalReporting.ts
+// Markdown headings start a line (after up to three spaces) with one to six
+// `#`. Anchoring them also keeps a long run of `#` from being retried at every
+// position, which made the earlier unanchored `#+` patterns quadratic.
 const STRONG_SECTION_PATTERNS = [
-    /#+\s*final\s+report/i,
-    /#+\s*completion\s+report/i,
-    /#+\s*handoff/i,
+    /^[ \t]{0,3}#{1,6}[ \t]*final\s+report/im,
+    /^[ \t]{0,3}#{1,6}[ \t]*completion\s+report/im,
+    /^[ \t]{0,3}#{1,6}[ \t]*handoff/im,
 ];
 const STRONG_FIELD_PATTERNS = [
     /files\s+changed/i,
@@ -43062,6 +44312,69 @@ const STRONG_FIELD_PATTERNS = [
     /known\s+limitations/i,
     /recommended\s+next\s+steps?/i,
 ];
+// Generic headings ("## Reporting", "## When you are done") are only guidance
+// when their section asks for something to report, so an empty heading does
+// not count. The heading must be the whole title: "## Reporting bugs" is not.
+// The trailing `\s*(?::\s*)?` has one way to split spaces, so a heading padded
+// with spaces is matched in linear time.
+const REPORT_HEADING = /^#{1,6}\s+(?:reporting|report(?:ing)?\s+back|what\s+to\s+report|(?:when|after)\s+you(?:'re|\s+are)?\s+(?:done|finished)|(?:when|after)\s+you\s+finish|summary\s+of\s+(?:your\s+)?(?:changes|work)|wrap(?:ping)?[\s-]up)\s*(?::\s*)?$/i;
+const HEADING = /^#{1,6}\s/;
+const YOU = String.raw `(?:you(?:'ve|\s+have)?\s+)?`;
+// What a report asks for, grouped so that two phrasings of one field ("files
+// changed", "files you modified") count once.
+const REPORT_FIELDS = [
+    [
+        /files\s+changed/i,
+        new RegExp(String.raw `\bfiles\s+(?:that\s+)?${YOU}(?:changed|modified|touched|edited|created)\b`, 'i'),
+        /\b(?:changed|modified|touched|edited)\s+files\b/i,
+        /\bwhat\s+you\s+changed\b/i,
+    ],
+    [
+        /commands\s+run/i,
+        new RegExp(String.raw `\bcommands\s+(?:that\s+)?${YOU}(?:ran|run|executed|used)\b`, 'i'),
+    ],
+    [
+        /tests\s+(added|updated|run|result|results)/i,
+        /\btest\s+results?\b/i,
+        new RegExp(String.raw `\btests\s+(?:that\s+)?${YOU}(?:ran|run|added|wrote|written|updated)\b`, 'i'),
+        /\b(?:results|output)\s+of\s+(?:the\s+)?(?:tests|checks|commands)\b/i,
+        /\band\s+their\s+(?:results|output)\b/i,
+    ],
+    [
+        /known\s+limitations/i,
+        /\b(?:anything|everything|work|items?|tasks?)\s+(?:(?:that\s+)?(?:is|was|you)\s+)?(?:left\s+)?(?:undone|unfinished|incomplete|outstanding|not\s+done)\b/i,
+        /\banything\s+(?:you\s+)?(?:skipped|left\s+out)\b/i,
+        // "Open questions" or "follow-ups" alone are often a project's own terms
+        // (an open questions page, a follow-ups feature), so they need a
+        // determiner that makes them items of the report.
+        /\b(?:any|remaining|unresolved)\s+open\s+(?:items|questions|issues|risks)\b/i,
+        /\bremaining\s+(?:work|issues|risks|todos?)\b/i,
+    ],
+    [
+        /recommended\s+next\s+steps?/i,
+        /\b(?:suggested|recommended|any)\s+next\s+steps\b/i,
+        /\b(?:any|remaining|suggested)\s+follow[- ]?ups?\b/i,
+    ],
+];
+// A single field is enough when the same line places it in the final message:
+// "In your final message, list the files you changed."
+const REPORT_ANCHOR = /\b(?:final|closing|completion|handoff)\s+(?:report|summary|message|response|note)\b|\bwhen\s+you(?:'re|\s+are)?\s+(?:done|finished)\b|\bwhen\s+you\s+finish\b|\breport\s+back\b/i;
+const REPORT_VERB = /\b(?:report|list|summari[sz]e|include|mention|describe|state|tell)\b/i;
+function fieldCount(text) {
+    return REPORT_FIELDS.filter((group) => group.some((p) => p.test(text))).length;
+}
+function hasReportingSection(lines) {
+    for (let i = 0; i < lines.length; i++) {
+        if (!REPORT_HEADING.test(lines[i]))
+            continue;
+        let end = i + 1;
+        while (end < lines.length && !HEADING.test(lines[end]))
+            end++;
+        if (fieldCount(lines.slice(i + 1, end).join('\n')) > 0)
+            return true;
+    }
+    return false;
+}
 function checkFinalReporting(filePath, content) {
     const hasStrongSection = STRONG_SECTION_PATTERNS.some((p) => p.test(content));
     if (hasStrongSection)
@@ -43069,6 +44382,16 @@ function checkFinalReporting(filePath, content) {
     const matchedFields = STRONG_FIELD_PATTERNS.filter((p) => p.test(content));
     if (matchedFields.length >= 2)
         return [];
+    // Plain-word fields count when they are asked for together, in one
+    // paragraph, so terms scattered through a long file do not add up.
+    if (content.split(/\n\s*\n/).some((paragraph) => fieldCount(paragraph) >= 2))
+        return [];
+    const lines = content.split('\n');
+    if (hasReportingSection(lines))
+        return [];
+    if (lines.some((line) => REPORT_ANCHOR.test(line) && REPORT_VERB.test(line) && fieldCount(line) > 0)) {
+        return [];
+    }
     return [
         {
             id: `reporting-missing-${filePath}`,
@@ -43099,13 +44422,222 @@ function isNegated(line, index) {
     return NEGATION.test(clause);
 }
 
+;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/lineContext.ts
+
+function collectSpans(line, pattern) {
+    const global = new RegExp(pattern.source, `${pattern.flags.replace('g', '')}g`);
+    const starts = [];
+    const ends = [];
+    for (let m = global.exec(line); m !== null; m = global.exec(line)) {
+        starts.push(m.index);
+        ends.push(m.index + m[0].length);
+        if (m[0].length === 0)
+            global.lastIndex++;
+    }
+    return { starts, ends };
+}
+/** Index of the first value greater than or equal to `target`, or `values.length`. */
+function lowerBound(values, target) {
+    let lo = 0;
+    let hi = values.length;
+    while (lo < hi) {
+        const mid = (lo + hi) >>> 1;
+        if (values[mid] < target)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+    return lo;
+}
+const WORD = /\w/;
+const WHOLE_BREAK = new RegExp(`^(?:${CLAUSE_BREAK.source})$`, 'i');
+const WHOLE_NEGATION = new RegExp(`^(?:${NEGATION.source})$`, 'i');
+// Longer than any break or negation word, so a longer partial word is neither.
+const MAX_KEYWORD_LENGTH = 16;
+// A straight quote opens after the start of the sentence, a space, or an
+// opening bracket, and closes before the end, a space, or punctuation. An
+// inch mark such as 27" therefore neither opens nor closes a quote.
+const OPENS_AFTER = /[\s([{]/;
+const CLOSES_BEFORE = /[\s.,;:!?)\]}]/;
+// List markers, emphasis, and closing punctuation around a quoted sentence.
+const LEADING_NOISE = /[\s>*+_~`-]/;
+const TRAILING_NOISE = /[\s.!?*_~`)\]]/;
+// A short label before a quoted sentence ("Rule: "…"") is part of the rule.
+const LABEL = /^[\w ]{1,40}:/;
+const WORD_OR_APOSTROPHE = /[\w']/;
+function quotedRanges(line, start, end) {
+    const ranges = [];
+    let straightOpen = -1;
+    let curlyOpen = -1;
+    for (let i = start; i < end; i++) {
+        const ch = line[i];
+        if (ch === '“' && curlyOpen === -1)
+            curlyOpen = i;
+        else if (ch === '”' && curlyOpen !== -1) {
+            ranges.push({ start: curlyOpen, end: i });
+            curlyOpen = -1;
+        }
+        else if (ch === '"') {
+            const before = i === start ? ' ' : line[i - 1];
+            const after = i + 1 >= end ? ' ' : line[i + 1];
+            if (straightOpen === -1 && OPENS_AFTER.test(before))
+                straightOpen = i;
+            else if (straightOpen !== -1 && CLOSES_BEFORE.test(after)) {
+                ranges.push({ start: straightOpen, end: i });
+                straightOpen = -1;
+            }
+        }
+    }
+    // A quote that spans the whole sentence is the sentence itself. Trimmed
+    // with loops: a trailing-class regex is quadratic on long whitespace runs.
+    let first = start;
+    while (first < end && LEADING_NOISE.test(line[first]))
+        first++;
+    const label = LABEL.exec(line.slice(first, Math.min(end, first + 42)));
+    if (label) {
+        first += label[0].length;
+        while (first < end && LEADING_NOISE.test(line[first]))
+            first++;
+    }
+    let last = end - 1;
+    while (last > first && TRAILING_NOISE.test(line[last]))
+        last--;
+    return ranges.filter((r) => !(r.start <= first && r.end >= last));
+}
+/**
+ * Facts about one line, gathered in one pass, so that checking any number of
+ * matches on it costs a binary search each rather than a rescan of the line.
+ * Hostile lines with many matches therefore stay linear in time, with no caps
+ * or windows that padding could push real advice past.
+ */
+function createLineContext(line) {
+    const breaks = collectSpans(line, CLAUSE_BREAK);
+    const negations = collectSpans(line, NEGATION);
+    const sentenceEnds = collectSpans(line, /[.!?](?=\s|$)/);
+    const quotedBySentence = new Map();
+    const sentenceAt = (index) => {
+        const next = lowerBound(sentenceEnds.starts, index);
+        return {
+            start: next > 0 ? sentenceEnds.ends[next - 1] : 0,
+            end: next < sentenceEnds.ends.length ? sentenceEnds.ends[next] : line.length,
+        };
+    };
+    return {
+        negatedAt(index) {
+            // `isNegated` cuts the line at `index`, which ends a word there. When
+            // the match starts inside a word, the part before it can be a whole
+            // break or negation word in that view: "then|skip", "not|skip".
+            if (index > 0 && WORD.test(line[index - 1]) && WORD.test(line[index] ?? '')) {
+                let wordStart = index;
+                while (wordStart > 0 &&
+                    index - wordStart <= MAX_KEYWORD_LENGTH &&
+                    // Apostrophes belong to the word too, as in "don't|skip".
+                    WORD_OR_APOSTROPHE.test(line[wordStart - 1])) {
+                    wordStart--;
+                }
+                const partial = line.slice(wordStart, index);
+                if (partial.length <= MAX_KEYWORD_LENGTH) {
+                    if (WHOLE_BREAK.test(partial))
+                        return false;
+                    if (WHOLE_NEGATION.test(partial))
+                        return true;
+                }
+            }
+            // The clause starts after the last break that ends at or before `index`.
+            const lastBreak = lowerBound(breaks.ends, index + 1) - 1;
+            const clauseStart = lastBreak >= 0 ? breaks.ends[lastBreak] : 0;
+            const first = lowerBound(negations.starts, clauseStart);
+            return first < negations.starts.length && negations.ends[first] <= index;
+        },
+        quotedAt(index) {
+            const { start, end } = sentenceAt(index);
+            let quoted = quotedBySentence.get(start);
+            if (!quoted) {
+                const ranges = quotedRanges(line, start, end).sort((a, b) => a.start - b.start);
+                const maxEnds = [];
+                for (const r of ranges)
+                    maxEnds.push(Math.max(r.end, maxEnds[maxEnds.length - 1] ?? -1));
+                quoted = { starts: ranges.map((r) => r.start), maxEnds };
+                quotedBySentence.set(start, quoted);
+            }
+            const before = lowerBound(quoted.starts, index) - 1;
+            return before >= 0 && quoted.maxEnds[before] > index;
+        },
+        sentenceAt,
+    };
+}
+
+;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/skipValidation.ts
+
+const QUALIFIER = String.raw `(?:(?:slow|flaky|failing|long[- ]running|unit|integration|e2e|end-to-end)\s+)?`;
+const TESTS = String.raw `(?:tests?|test\s+suite|specs)`;
+// Advice that names the tests: "skip the tests", "skip slow tests", "tests can
+// be skipped", "rely on CI instead of running them".
+const DIRECT = [
+    new RegExp(String.raw `\bskip(?:ping)?\s+(?:the\s+|all\s+|any\s+|your\s+)?${QUALIFIER}${TESTS}\b`, 'gi'),
+    new RegExp(String.raw `\b${TESTS}\s+(?:can|may|could|should)\s+be\s+skipped\b`, 'gi'),
+    /\brely\s+on\s+(?:the\s+)?CI\s+(?:instead|rather)\b/gi,
+];
+// "Skip them" counts only when the same sentence is about tests:
+// "If the tests are slow, skip them", "Skip them if testing takes too long".
+const PRONOUN = /\bskip(?:ping)?\s+(?:them|it|those|these)\b/gi;
+const TEST_CONTEXT = /\btest(?:s|ing)?\b|\btest\s+suite\b|\bspecs?\b/i;
+// A narrow, explicit scope is an exception rather than permission to stop
+// validating: "skip the e2e tests for documentation-only changes".
+const SCOPED_EXCEPTION = /\b(?:docs?|documentation|readme|comments?|typo)[- ]only\b/i;
+const skipValidation_MAX_EVIDENCE_LENGTH = 160;
+/**
+ * The first place in `line` that tells an agent to skip tests or leave them
+ * to CI, or null. Negated advice ("Never skip tests"), quoted examples,
+ * advice about something other than tests ("If the linter is slow, skip
+ * it"), and narrow documentation-only exceptions do not count. Every match is
+ * examined, each with a lookup into one pass over the line, so padding a line
+ * with negated mentions neither hides later advice nor costs more than linear
+ * time.
+ */
+function findSkipValidation(line) {
+    const candidates = [];
+    for (const pattern of DIRECT) {
+        for (const m of line.matchAll(pattern))
+            candidates.push({ index: m.index, needsTestContext: false });
+    }
+    for (const m of line.matchAll(PRONOUN))
+        candidates.push({ index: m.index, needsTestContext: true });
+    if (candidates.length === 0)
+        return null;
+    candidates.sort((a, b) => a.index - b.index);
+    const context = createLineContext(line);
+    const verdicts = new Map();
+    for (const { index, needsTestContext } of candidates) {
+        const { start, end } = context.sentenceAt(index);
+        let verdict = verdicts.get(start);
+        if (!verdict) {
+            const sentence = line.slice(start, end);
+            verdict = {
+                aboutTests: TEST_CONTEXT.test(sentence),
+                exception: SCOPED_EXCEPTION.test(sentence),
+            };
+            verdicts.set(start, verdict);
+        }
+        if (verdict.exception || (needsTestContext && !verdict.aboutTests))
+            continue;
+        if (context.quotedAt(index) || context.negatedAt(index))
+            continue;
+        const sentence = line.slice(start, Math.min(end, start + skipValidation_MAX_EVIDENCE_LENGTH * 4));
+        return { index, sentence: sentence.replace(/^[\s>*+-]+/, '').trim() };
+    }
+    return null;
+}
+
 ;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/checks/riskyLanguage.ts
 
 
+
+const SKIP_TESTS_LABEL = 'skip tests';
 // Matches are ignored when negated earlier in the same clause ("Never skip
 // tests", "Do not force push"), so only permissive wording is reported.
 const HIGH_RISK_PATTERNS = [
-    { pattern: /skip\s+tests/i, label: 'skip tests' },
+    { pattern: /skip\s+tests/i, label: SKIP_TESTS_LABEL },
     { pattern: /ignore\s+failing\s+tests/i, label: 'ignore failing tests' },
     { pattern: /disable\s+tests/i, label: 'disable tests' },
     {
@@ -43162,22 +44694,52 @@ const MEDIUM_RECOMMENDATION = 'Avoid open-ended or unsafe instructions. Be speci
 function findRisky(filePath, content, patterns, severity) {
     const issues = [];
     const lines = content.split('\n');
+    const reported = new Set();
+    const report = (idx, label) => {
+        // Several phrasings of one instruction on a line are one issue.
+        const key = `${idx}:${label}`;
+        if (reported.has(key))
+            return;
+        reported.add(key);
+        issues.push({
+            id: `risky-${severity}-${filePath}-${idx}-${label}`,
+            severity,
+            category: 'risky-language',
+            file: filePath,
+            line: idx + 1,
+            evidence: getLineEvidence(content, idx + 1),
+            message: `Risky instruction: "${label}"`,
+            recommendation: severity === 'high' ? HIGH_RECOMMENDATION : MEDIUM_RECOMMENDATION,
+        });
+    };
+    // Built once per line that has a match, so every match on a long line is
+    // checked with a lookup instead of a rescan.
+    const contexts = new Map();
+    const contextFor = (idx) => {
+        let context = contexts.get(idx);
+        if (!context) {
+            context = createLineContext(lines[idx]);
+            contexts.set(idx, context);
+        }
+        return context;
+    };
     for (const { pattern, label } of patterns) {
         const global = new RegExp(pattern.source, `${pattern.flags}g`);
         lines.forEach((line, idx) => {
-            const permissive = [...line.matchAll(global)].some((m) => !isNegated(line, m.index));
-            if (!permissive)
-                return;
-            issues.push({
-                id: `risky-${severity}-${filePath}-${idx}-${label}`,
-                severity,
-                category: 'risky-language',
-                file: filePath,
-                line: idx + 1,
-                evidence: getLineEvidence(content, idx + 1),
-                message: `Risky instruction: "${label}"`,
-                recommendation: severity === 'high' ? HIGH_RECOMMENDATION : MEDIUM_RECOMMENDATION,
-            });
+            for (const m of line.matchAll(global)) {
+                if (!contextFor(idx).negatedAt(m.index)) {
+                    report(idx, label);
+                    break;
+                }
+            }
+        });
+    }
+    // Advice to skip tests in other words: "If the tests are slow, skip them",
+    // "Skip the tests when they are slow", "rely on CI instead".
+    if (severity === 'high') {
+        lines.forEach((line, idx) => {
+            if (findSkipValidation(line) !== null)
+                report(idx, SKIP_TESTS_LABEL);
         });
     }
     return issues;
@@ -43190,6 +44752,7 @@ function checkRiskyLanguage(filePath, content) {
 }
 
 ;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/checks/commandAlignment.ts
+
 
 // Package-manager commands that are not package.json scripts.
 const BUILTINS = {
@@ -43325,6 +44888,109 @@ function checkCommandAlignment(filePath, content, scripts) {
         recommendation: `Update the instruction file or add package.json script "${cmd.script}".`,
     }));
 }
+// Commands that install or change dependencies, and so write a lockfile.
+const INSTALLS = {
+    pnpm: new Set('add i install remove rm uninstall un update up upgrade dedupe import link ln unlink prune rebuild rb fetch'.split(' ')),
+    npm: new Set('i install ci add remove rm uninstall un update up upgrade dedupe link unlink prune rebuild'.split(' ')),
+    yarn: new Set('add i install remove upgrade up dedupe import link unlink'.split(' ')),
+    bun: new Set('i install add a remove rm update link unlink'.split(' ')),
+};
+// Text just before a command that offers it as an alternative or names it
+// only to rule it out: "instead of `npm install`", "(not `yarn`)", "or `npm test`".
+const ALTERNATIVE_BEFORE = /(?:\binstead\s+of|\brather\s+than|\bunlike|\bnot|\bvs\.?|\bversus|\bover|\bfrom|\bor|\be\.g\.|\bsuch\s+as)\s*[`'"(]*\s*$/i;
+const MAX_ALTERNATIVE_CONTEXT = 40;
+// Bounds that keep the work per line linear on hostile input: only the first
+// matches on a line are examined, and negation is judged from a window
+// before each match rather than everything before it.
+const MAX_INVOCATIONS_PER_LINE = 64;
+const MAX_NEGATION_CONTEXT = 200;
+// A clause scoped to another manager: "If you use yarn, run `yarn install`".
+function scopedToManager(line, pm) {
+    return new RegExp(`\\bif\\s+you(?:'re|\\s+are)?\\s+(?:use|using|prefer)\\s+${pm}\\b|\\b(?:for|with)\\s+${pm}(?:\\s+users)?\\s*[:,]`, 'i').test(line);
+}
+/**
+ * Package-manager invocations that commit to a manager: installs and script
+ * runs. Version specs (`pnpm@9.12.0`), global installs, registry and one-off
+ * commands (`npm publish`, `pnpm dlx`), negated or alternative mentions, and
+ * prose are skipped. At most one invocation per manager and line.
+ */
+function extractPackageManagerInvocations(content) {
+    const results = [];
+    content.split('\n').forEach((line, idx) => {
+        const seen = new Set();
+        const scoped = new Map();
+        let examined = 0;
+        for (const match of line.matchAll(/(?<![\w@./-])(pnpm|npm|yarn|bun)(?=[ \t])/g)) {
+            if (++examined > MAX_INVOCATIONS_PER_LINE)
+                break;
+            const pm = match[1];
+            if (seen.has(pm))
+                continue;
+            const tokens = commandSegment(line.slice(match.index + match[0].length));
+            const parsed = parseInvocation(tokens);
+            if (!parsed)
+                continue;
+            const { command, viaRun } = parsed;
+            if (!TOKEN.test(command) || command === 'global')
+                continue;
+            if (tokens.some((t) => t === '-g' || t === '--global'))
+                continue;
+            const commits = INSTALLS[pm].has(command) ||
+                viaRun ||
+                (!BUILTINS[pm].has(command) &&
+                    !VERSION.test(command) &&
+                    !PROSE_WORDS.has(command.toLowerCase()) &&
+                    (pm !== 'npm' || NPM_SHORTHAND_SCRIPTS.has(command)));
+            if (!commits)
+                continue;
+            const before = line.slice(Math.max(0, match.index - MAX_ALTERNATIVE_CONTEXT), match.index);
+            if (ALTERNATIVE_BEFORE.test(before))
+                continue;
+            const window = line.slice(Math.max(0, match.index - MAX_NEGATION_CONTEXT), match.index);
+            if (isNegated(window, window.length))
+                continue;
+            if (!scoped.has(pm))
+                scoped.set(pm, scopedToManager(line, pm));
+            if (scoped.get(pm))
+                continue;
+            seen.add(pm);
+            results.push({ manager: pm, raw: `${pm} ${tokens.join(' ')}`.trim(), line: idx + 1 });
+        }
+    });
+    return results;
+}
+const MAX_LISTED_LINES = 10;
+/**
+ * One issue per file and package manager the repository does not use,
+ * anchored at its first use, so a block of `npm run` lines in a pnpm
+ * repository is one mistake to fix rather than one per line.
+ */
+function checkPackageManagerAlignment(filePath, content, expected) {
+    if (expected === null)
+        return [];
+    const linesByManager = new Map();
+    for (const cmd of extractPackageManagerInvocations(content)) {
+        if (cmd.manager === expected.manager)
+            continue;
+        linesByManager.set(cmd.manager, [...(linesByManager.get(cmd.manager) ?? []), cmd.line]);
+    }
+    return [...linesByManager].map(([manager, lines]) => {
+        const listed = lines.slice(0, MAX_LISTED_LINES).join(', ');
+        const more = lines.length > MAX_LISTED_LINES ? ` and ${lines.length - MAX_LISTED_LINES} more` : '';
+        const where = lines.length > 1 ? ` on lines ${listed}${more}` : '';
+        return {
+            id: `command-alignment-pm-${filePath}-${manager}`,
+            severity: 'medium',
+            category: 'command-alignment',
+            file: filePath,
+            line: lines[0],
+            evidence: getLineEvidence(content, lines[0]),
+            message: `Instruction uses ${manager}, but this repository uses ${expected.manager}`,
+            recommendation: `Use ${expected.manager} commands instead of ${manager}${where} (${expected.evidence.join(', ')}). ` +
+                `Running ${manager} here can write a second lockfile and install different dependency versions.`,
+        };
+    });
+}
 function checkCommandsWithoutPackageJson(filePath, content) {
     if (extractCommands(content).length === 0)
         return [];
@@ -43370,7 +45036,9 @@ function extractMakeTargets(content) {
 function parseMakeTargets(makefile) {
     const targets = new Set();
     for (const line of makefile.split('\n')) {
-        const match = /^([A-Za-z0-9_.\-/ ]+?)\s*::?(?!=)/.exec(line);
+        // Names and the blanks between them cannot overlap, which keeps matching
+        // linear on long lines of blanks that end without a colon.
+        const match = /^ *([A-Za-z0-9_.\/-]+(?:[ \t]+[A-Za-z0-9_.\/-]+)*)[ \t]*::?(?![:=])/.exec(line);
         if (!match)
             continue;
         for (const name of match[1].split(/\s+/)) {
@@ -43414,6 +45082,9 @@ function checkMakeTargets(filePath, content, targets) {
 
 ;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/checks/contradictions.ts
 
+
+
+
 const CONTRADICTION_GROUPS = [
     {
         name: 'tests',
@@ -43422,13 +45093,18 @@ const CONTRADICTION_GROUPS = [
             /always\s+run\s+tests/i,
             /run\s+tests\s+before\s+finishing/i,
             /tests\s+must\s+pass/i,
+            /always\s+run\s+(?:the\s+)?(?:test\s+suite|`[^`\n]{0,80}\btest\b[^`\n]{0,80}`)/i,
+            /tests\s+must\s+always\s+pass/i,
+            /(?:never|do\s+not|don'?t)\s+skip\s+(?:the\s+|any\s+)?(?:\w+\s+)?tests\b/i,
         ],
         opposingPhrases: [
-            /skip\s+tests/i,
             /do\s+not\s+run\s+tests/i,
             /tests\s+are\s+optional/i,
             /ignore\s+failing\s+tests/i,
         ],
+        // "skip tests" in any wording ("If the tests are slow, skip them"),
+        // without narrow exceptions such as documentation-only changes.
+        findOpposing: findSkipValidation,
     },
     {
         name: 'refactors',
@@ -43482,15 +45158,31 @@ const CONTRADICTION_GROUPS = [
 ];
 // Opposing phrases only count when permissive: "Never skip tests" agrees with
 // "always run tests" rather than contradicting it.
+const MAX_PHRASE_LENGTH = 160;
+// Phrases come from audited files and go into evidence and recommendations,
+// so they are shown the way line evidence is: one line, visible characters,
+// bounded length.
+function toPhrase(text) {
+    return toDisplayText(text.replace(/\s+/g, ' ').trim()).slice(0, MAX_PHRASE_LENGTH);
+}
 function findMatches(files, patterns, ignoreNegated = false) {
     const matches = [];
     for (const { path, content } of files) {
         for (const pattern of patterns) {
             const global = new RegExp(pattern.source, `${pattern.flags}g`);
             for (const line of content.split('\n')) {
-                const match = [...line.matchAll(global)].find((m) => !ignoreNegated || !isNegated(line, m.index));
+                let match = null;
+                let context = null;
+                for (const m of line.matchAll(global)) {
+                    if (ignoreNegated)
+                        context ??= createLineContext(line);
+                    if (!context?.negatedAt(m.index)) {
+                        match = m;
+                        break;
+                    }
+                }
                 if (match) {
-                    matches.push({ phrase: match[0], file: path });
+                    matches.push({ phrase: toPhrase(match[0]), file: path });
                     break;
                 }
             }
@@ -43498,11 +45190,83 @@ function findMatches(files, patterns, ignoreNegated = false) {
     }
     return matches;
 }
+function findWithMatcher(files, find) {
+    const matches = [];
+    for (const { path, content } of files) {
+        for (const line of content.split('\n')) {
+            const found = find(line);
+            if (found) {
+                matches.push({ phrase: toPhrase(found.sentence), file: path });
+                break;
+            }
+        }
+    }
+    return matches;
+}
+// An instruction to use one package manager: "Use pnpm.", "- Use npm for
+// everything", "We use yarn", "Always use bun", "Package manager: pnpm".
+// The verb must start a sentence or list item or follow we/always/only/please,
+// so "if you use yarn" and "the docs site uses npm" are not preferences, and
+// generic phrases such as "use npm scripts" are excluded.
+const PREFERENCES = [
+    /(?:^|[.;:!?]\s+|^\s*(?:[-*+]|\d+\.)\s+|\b(?:we|always|only|please)\s+)use\s+`?(pnpm|npm|yarn|bun)\b(?!\s+(?:scripts?|packages?|registry|modules?|workspaces?|cache|link|audit|version|publish)\b)/gi,
+    /\bpackage\s+manager\s*(?:is|:)\s*`?(pnpm|npm|yarn|bun)\b/gi,
+];
+function findPreferences(files) {
+    const found = [];
+    for (const { path, content } of files) {
+        // Only standing instructions: a nested AGENTS.md, a command, or a prompt
+        // may describe a sub-project that uses another manager on purpose.
+        if (!isPrimaryInstructionFile(path))
+            continue;
+        const seen = new Set();
+        for (const line of content.split('\n')) {
+            let context = null;
+            for (const pattern of PREFERENCES) {
+                for (const m of line.matchAll(pattern)) {
+                    context ??= createLineContext(line);
+                    const manager = m[1].toLowerCase();
+                    // Judge negation and quotes from the instruction itself, not from
+                    // the punctuation that ends the previous sentence.
+                    const start = m.index + Math.max(0, m[0].search(/\b(?:we|always|only|please|use|package)\b/i));
+                    if (seen.has(manager) || context.negatedAt(start) || context.quotedAt(start))
+                        continue;
+                    seen.add(manager);
+                    const phrase = toPhrase(m[0].replace(/^[\s.;:!?*+-]+|^\d+\.\s+/g, '').replace(/`/g, ''));
+                    found.push({ manager, phrase, file: path });
+                }
+            }
+        }
+    }
+    return found;
+}
+function packageManagerContradiction(files) {
+    const preferences = findPreferences(files);
+    const first = preferences[0];
+    const other = preferences.find((p) => p.manager !== first?.manager);
+    if (!first || !other)
+        return null;
+    const involvedFiles = [...new Set(preferences.map((p) => p.file))];
+    return {
+        id: 'contradiction-package-manager',
+        severity: 'medium',
+        category: 'contradictions',
+        file: involvedFiles.length > 1 ? 'multiple' : involvedFiles[0],
+        files: involvedFiles,
+        evidence: `${first.file}: "${first.phrase}" vs ${other.file}: "${other.phrase}"`,
+        message: 'Contradictory agent instructions detected: package-manager',
+        recommendation: `Name one package manager in every instruction file, the one the lockfile belongs to. ` +
+            `Found "${first.phrase}" and "${other.phrase}".`,
+    };
+}
 function checkContradictions(files) {
     const issues = [];
     for (const group of CONTRADICTION_GROUPS) {
         const strictMatches = findMatches(files, group.strictPhrases);
-        const opposingMatches = findMatches(files, group.opposingPhrases, true);
+        const opposingMatches = [
+            ...findMatches(files, group.opposingPhrases, true),
+            ...(group.findOpposing ? findWithMatcher(files, group.findOpposing) : []),
+        ];
         if (strictMatches.length === 0 || opposingMatches.length === 0)
             continue;
         const strictMatch = strictMatches[0];
@@ -43526,6 +45290,9 @@ function checkContradictions(files) {
                 `Found "${strictExample}" and "${opposingExample}".`,
         });
     }
+    const packageManager = packageManagerContradiction(files);
+    if (packageManager)
+        issues.push(packageManager);
     return issues;
 }
 
@@ -43812,8 +45579,28 @@ const PATH_EXTENSIONS = /\.(?:md|mdc|mdx|txt|ts|tsx|js|jsx|mjs|cjs|json|jsonc|ya
 // Obvious placeholders and generated or dependency paths.
 const IGNORED = /path\/to\/|your[-_]|<|>|\{|\}|\*|\?|\$|xxx|(?:^|\/)(?:foo|bar|baz)\.|^(?:node_modules|dist|build|coverage)\//i;
 const MAX_REFERENCES_PER_FILE = 200;
+// Longer targets are never real paths; rejecting them first also keeps the
+// trailing-punctuation strip below linear on hostile input.
+const MAX_TARGET_LENGTH = 512;
+// A bare name in inline code is a file only with a documentation or config
+// extension (`RELEASING.md`, `pyproject.toml`); `index.ts` or `config.get`
+// could be anything.
+const BARE_FILE = /^\.?[A-Za-z0-9][\w.-]*\.(?:md|mdx|json|jsonc|ya?ml|toml|sh)$/i;
+// A sentence saying paths are ignored or excluded ("`.gitignore` excludes
+// `.idea/`", "`out/` is ignored by git") describes what a checkout leaves
+// out, not files to read. "Ignored" alone is often an unrelated verb ("the
+// menu ignored `hidden`"), so it only counts in the passive or with "by".
+const DESCRIBES_EXCLUDED = /\.gitignore\b|\bgit-?ignored\b|\b(?:is|are|be|being|stays?|remains?|kept)\s+(?:\w+\s+)?ignored\b|\bignored\s+by\b|\bexclude[sd]?\b|\bexcluding\b|\buntracked\b|\bnot\s+(?:checked\s+in|committed|tracked)\b/i;
+// Sentence boundaries within a line; a period inside `docs/a.md` is not one.
+const SENTENCE_BREAK = /(?<=[.!?])\s+/;
 function normalizeTarget(raw) {
-    const target = raw.replace(/[#?].*$/, '').replace(/[.,;:)]+$/, '');
+    if (raw.length > MAX_TARGET_LENGTH)
+        return null;
+    const withoutFragment = raw.replace(/[#?].*$/, '');
+    let end = withoutFragment.length;
+    while (end > 0 && '.,;:)'.includes(withoutFragment[end - 1]))
+        end--;
+    const target = withoutFragment.slice(0, end);
     if (!target || target.includes('://') || /^(?:mailto:|#|\/|~|-)/.test(target))
         return null;
     if (IGNORED.test(target))
@@ -43832,21 +45619,24 @@ function looksLikePath(token) {
 /**
  * Paths the text points at: Markdown link targets, inline-code paths, and
  * Claude-style `@path` imports. Fenced code blocks are skipped because they
- * usually hold example commands and output, not references.
+ * usually hold example commands and output, not references, and so is inline
+ * code in sentences that describe paths as ignored or excluded.
  */
 function extractFileReferences(content) {
     const refs = [];
     const seen = new Set();
     let inFence = false;
-    const add = (raw, line) => {
+    const add = (raw, line, bare = false) => {
+        if (refs.length >= MAX_REFERENCES_PER_FILE)
+            return;
         const target = normalizeTarget(raw);
-        if (!target || refs.length >= MAX_REFERENCES_PER_FILE)
+        if (!target)
             return;
         const key = `${line}:${target}`;
         if (seen.has(key))
             return;
         seen.add(key);
-        refs.push({ target, line });
+        refs.push(bare ? { target, line, bare } : { target, line });
     };
     content.split('\n').forEach((text, idx) => {
         if (/^\s*(```|~~~)/.test(text)) {
@@ -43856,11 +45646,21 @@ function extractFileReferences(content) {
         if (inFence)
             return;
         const line = idx + 1;
-        for (const m of text.matchAll(/\[[^\]]*\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/g))
+        // Link text, target, and title are bounded so a line of unclosed
+        // brackets, parentheses, or quotes cannot make each match attempt scan
+        // the rest of the line.
+        for (const m of text.matchAll(/\[[^[\]]{0,500}\]\(\s*([^)\s]{1,512})(?:\s+"[^"]{0,500}")?\s*\)/g)) {
             add(m[1], line);
-        for (const m of text.matchAll(/`([^`\s]+)`/g)) {
-            if (looksLikePath(m[1]))
-                add(m[1], line);
+        }
+        for (const sentence of text.split(SENTENCE_BREAK)) {
+            if (DESCRIBES_EXCLUDED.test(sentence))
+                continue;
+            for (const m of sentence.matchAll(/`([^`\s]+)`/g)) {
+                if (looksLikePath(m[1]))
+                    add(m[1], line);
+                else if (BARE_FILE.test(m[1]))
+                    add(m[1], line, true);
+            }
         }
         for (const m of text.matchAll(/(?:^|\s)@([\w./-]+\.\w+)/g))
             add(m[1], line);
@@ -43880,6 +45680,433 @@ function checkBrokenReferences(filePath, content, missingTargets) {
         message: `Instruction references a file that does not exist: "${ref.target}"`,
         recommendation: 'Update or remove the reference. Agents follow stale paths and waste time looking for files that moved or were deleted.',
     }));
+}
+
+;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/gitignore.ts
+// A subset of gitignore matching, enough to tell whether a path an instruction
+// file mentions is one the repository deliberately keeps out of version
+// control. The audited repository is untrusted, so patterns are matched by a
+// wildcard matcher whose cost is bounded by pattern length times path length
+// (patterns are never compiled to regular expressions), rule count and lengths
+// are capped, and each matcher has a total step budget. When the budget runs
+// out, paths count as not ignored, so the reference is reported rather than
+// silently accepted.
+const MAX_RULES = 1_000;
+const MAX_PATTERN_LENGTH = 256;
+const MAX_PATH_LENGTH = 512;
+const MAX_PATH_SEGMENTS = 32;
+const MAX_SEGMENT_LENGTH = 255;
+const MAX_MATCH_STEPS = 20_000_000;
+function parseClass(glob, start) {
+    let i = start + 1;
+    const negated = glob[i] === '!' || glob[i] === '^';
+    if (negated)
+        i++;
+    const ranges = [];
+    // A `]` right after the opening bracket is a literal member.
+    if (glob[i] === ']') {
+        ranges.push([']', ']']);
+        i++;
+    }
+    while (i < glob.length && glob[i] !== ']') {
+        const lo = glob[i];
+        if (glob[i + 1] === '-' && i + 2 < glob.length && glob[i + 2] !== ']') {
+            ranges.push([lo, glob[i + 2]]);
+            i += 3;
+        }
+        else {
+            ranges.push([lo, lo]);
+            i++;
+        }
+    }
+    if (i >= glob.length)
+        return null;
+    return { token: { kind: 'class', negated, ranges }, end: i + 1 };
+}
+function tokenize(glob) {
+    const tokens = [];
+    let i = 0;
+    while (i < glob.length) {
+        const ch = glob[i];
+        if (ch === '*') {
+            while (glob[i] === '*')
+                i++;
+            tokens.push({ kind: 'star' });
+            continue;
+        }
+        if (ch === '?') {
+            tokens.push({ kind: 'any' });
+        }
+        else if (ch === '\\' && i + 1 < glob.length) {
+            i++;
+            tokens.push({ kind: 'char', ch: glob[i] });
+        }
+        else if (ch === '[') {
+            const cls = parseClass(glob, i);
+            if (cls) {
+                tokens.push(cls.token);
+                i = cls.end;
+                continue;
+            }
+            tokens.push({ kind: 'char', ch });
+        }
+        else {
+            tokens.push({ kind: 'char', ch });
+        }
+        i++;
+    }
+    return tokens;
+}
+function tokenMatches(token, ch) {
+    if (token.kind === 'any')
+        return true;
+    if (token.kind === 'char')
+        return token.ch === ch;
+    if (token.kind === 'class') {
+        const inside = token.ranges.some(([lo, hi]) => ch >= lo && ch <= hi);
+        return inside !== token.negated;
+    }
+    return false;
+}
+// Classic two-pointer wildcard match: on a mismatch, resume from the last `*`
+// with it consuming one more character. Worst case O(pattern × text).
+function matchSegment(tokens, text, budget) {
+    let t = 0;
+    let s = 0;
+    let starToken = -1;
+    let starText = 0;
+    while (s < text.length) {
+        if (--budget.left < 0)
+            return false;
+        const token = tokens[t];
+        if (token && token.kind !== 'star' && tokenMatches(token, text[s])) {
+            t++;
+            s++;
+        }
+        else if (token?.kind === 'star') {
+            starToken = t++;
+            starText = s;
+        }
+        else if (starToken !== -1) {
+            t = starToken + 1;
+            s = ++starText;
+        }
+        else {
+            return false;
+        }
+    }
+    while (tokens[t]?.kind === 'star')
+        t++;
+    return t === tokens.length;
+}
+// Match pattern segments against path segments, `**` spanning zero or more.
+// Memoised, so the cost is bounded by pattern segments × path segments.
+function matchSegments(pattern, parts, budget) {
+    const memo = new Map();
+    const go = (p, s) => {
+        if (--budget.left < 0)
+            return false;
+        if (p === pattern.length)
+            return s === parts.length;
+        const key = p * (parts.length + 1) + s;
+        const cached = memo.get(key);
+        if (cached !== undefined)
+            return cached;
+        const seg = pattern[p];
+        const result = seg === 'globstar'
+            ? go(p + 1, s) || (s < parts.length && go(p, s + 1))
+            : s < parts.length && matchSegment(seg, parts[s], budget) && go(p + 1, s + 1);
+        memo.set(key, result);
+        return result;
+    };
+    return go(0, 0);
+}
+// Trailing spaces and tabs are dropped unless escaped with a backslash. A
+// loop rather than a regex, whose cost on long whitespace runs is quadratic.
+function trimTrailingWhitespace(line) {
+    let end = line.length;
+    while (end > 0 && (line[end - 1] === ' ' || line[end - 1] === '\t'))
+        end--;
+    if (end < line.length && end > 0 && line[end - 1] === '\\')
+        end++;
+    return line.slice(0, end);
+}
+function parseRule(line) {
+    if (line.length > MAX_PATTERN_LENGTH * 2)
+        return null;
+    let pattern = trimTrailingWhitespace(line);
+    if (pattern === '' || pattern.startsWith('#') || pattern.length > MAX_PATTERN_LENGTH)
+        return null;
+    const negated = pattern.startsWith('!');
+    if (negated)
+        pattern = pattern.slice(1);
+    else if (pattern.startsWith('\\!') || pattern.startsWith('\\#'))
+        pattern = pattern.slice(1);
+    const dirOnly = pattern.endsWith('/');
+    if (dirOnly)
+        pattern = pattern.slice(0, -1);
+    // A slash anywhere but the end anchors the pattern to the .gitignore's directory.
+    const anchored = pattern.includes('/');
+    if (pattern.startsWith('/'))
+        pattern = pattern.slice(1);
+    if (pattern === '')
+        return null;
+    const segments = [];
+    for (const part of pattern.split('/')) {
+        if (part === '**') {
+            if (segments[segments.length - 1] !== 'globstar')
+                segments.push('globstar');
+        }
+        else {
+            segments.push(tokenize(part));
+        }
+    }
+    return { segments, anchored, negated, dirOnly };
+}
+function parseGitignore(content) {
+    const rules = [];
+    for (const line of content.split(/\r?\n/)) {
+        if (rules.length >= MAX_RULES)
+            break;
+        const rule = parseRule(line);
+        if (rule)
+            rules.push(rule);
+    }
+    const budget = { left: MAX_MATCH_STEPS };
+    const cache = new Map();
+    const ruleMatches = (rule, parts, isDir) => {
+        if (rule.dirOnly && !isDir)
+            return false;
+        // An unanchored pattern matches a name at any depth. Every ancestor is
+        // checked separately, so comparing against the last segment is enough.
+        if (!rule.anchored) {
+            const [segment] = rule.segments;
+            return segment !== 'globstar' && matchSegment(segment, parts[parts.length - 1], budget);
+        }
+        return matchSegments(rule.segments, parts, budget);
+    };
+    // The last matching rule wins, so a later `!pattern` can re-include a path.
+    const isIgnored = (parts, isDir) => {
+        let ignored = false;
+        for (const rule of rules) {
+            if (budget.left < 0)
+                return false;
+            if (rule.negated === ignored && ruleMatches(rule, parts, isDir))
+                ignored = !rule.negated;
+        }
+        return ignored;
+    };
+    return {
+        ignores(relPath, isDir = false) {
+            if (rules.length === 0 || budget.left < 0 || relPath.length > MAX_PATH_LENGTH)
+                return false;
+            const parts = relPath
+                .replace(/\\/g, '/')
+                .split('/')
+                .filter((part, i) => part !== '' && !(i === 0 && part === '.'));
+            if (parts.length === 0 || parts.length > MAX_PATH_SEGMENTS)
+                return false;
+            if (parts.some((part) => part.length > MAX_SEGMENT_LENGTH))
+                return false;
+            const key = `${isDir ? 'd' : 'f'}:${parts.join('/')}`;
+            const cached = cache.get(key);
+            if (cached !== undefined)
+                return cached;
+            // Git does not descend into an ignored directory, so nothing below it
+            // can be re-included by a later negation.
+            let result = false;
+            for (let k = 1; k < parts.length && !result; k++) {
+                result = isIgnored(parts.slice(0, k), true);
+            }
+            if (!result)
+                result = isIgnored(parts, isDir);
+            if (budget.left < 0)
+                result = false;
+            cache.set(key, result);
+            return result;
+        },
+    };
+}
+
+;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/delegation.ts
+
+
+// Claude Code follows imports up to five hops. Only text files are followed,
+// and both the files loaded and the read attempts are capped so a hostile
+// repository cannot make the audit read an unbounded number of files.
+const MAX_IMPORT_DEPTH = 5;
+const MAX_IMPORTED_FILES = 50;
+const MAX_IMPORT_ATTEMPTS = 200;
+const MAX_IMPORTS_PER_FILE = 100;
+const IMPORTABLE = /\.(?:md|mdc|mdx|txt)$/i;
+// Path-like tokens. Longer tokens are never file paths, and skipping them
+// keeps the per-token suffix lookups below linear in the file size.
+const PATH_TOKEN = /[\w.@/-]+/g;
+const MAX_TOKEN_LENGTH = 512;
+function toPosix(p) {
+    return p.replace(/\\/g, '/');
+}
+/**
+ * Claude-style `@path` imports in `content`, as repo-relative paths resolved
+ * against the importing file's directory. Imports that would leave the
+ * repository, absolute paths, and non-text files are dropped.
+ */
+function importTargets(filePath, content) {
+    const dir = external_node_path_default().posix.dirname(toPosix(filePath));
+    const targets = [];
+    let inFence = false;
+    for (const line of content.split('\n')) {
+        if (/^\s*(```|~~~)/.test(line)) {
+            inFence = !inFence;
+            continue;
+        }
+        if (inFence)
+            continue;
+        for (const m of line.matchAll(/(?:^|\s)@([\w./-]+\.\w+)/g)) {
+            if (targets.length >= MAX_IMPORTS_PER_FILE)
+                return targets;
+            if (m[1].startsWith('/') || !IMPORTABLE.test(m[1]))
+                continue;
+            const rel = external_node_path_default().posix.normalize(external_node_path_default().posix.join(dir, m[1]));
+            if (rel === '..' || rel.startsWith('../'))
+                continue;
+            targets.push(external_node_path_default().normalize(rel));
+        }
+    }
+    return targets;
+}
+/**
+ * Follow `@imports` from the primary instruction files to in-repository files
+ * that are not context files themselves (for example `@docs/agent-guide.md`),
+ * breadth first. `read` must return '' for anything missing or outside the
+ * repository; such targets are not loaded.
+ */
+async function loadImportedFiles(files, read) {
+    const known = new Set(files.map((f) => f.path));
+    const imported = [];
+    const imports = new Map();
+    let attempts = 0;
+    let frontier = files.filter((f) => isPrimaryInstructionFile(f.path));
+    for (let depth = 0; depth < MAX_IMPORT_DEPTH && frontier.length > 0; depth++) {
+        const next = [];
+        for (const file of frontier) {
+            const targets = importTargets(file.path, file.content);
+            imports.set(file.path, targets);
+            for (const rel of targets) {
+                if (known.has(rel))
+                    continue;
+                if (imported.length >= MAX_IMPORTED_FILES || attempts >= MAX_IMPORT_ATTEMPTS)
+                    continue;
+                known.add(rel);
+                attempts++;
+                const content = await read(rel);
+                if (content === '')
+                    continue;
+                const loaded = { path: rel, kind: 'unknown', content };
+                imported.push(loaded);
+                next.push(loaded);
+            }
+        }
+        frontier = next;
+    }
+    return { imported, imports };
+}
+function buildDelegationGraph(files, imports) {
+    const byPath = new Map(files.map((f) => [f.path, f]));
+    // A file is referenced by its repo path anywhere in a token ("docs/a.md",
+    // "./docs/a.md", "@docs/a.md"), and a root-level file also by its name in
+    // any case ("Follow agents.md").
+    const byRepoPath = new Map();
+    const byRootName = new Map();
+    let longestPath = 0;
+    for (const f of files) {
+        const posix = toPosix(f.path);
+        byRepoPath.set(posix, f.path);
+        if (!posix.includes('/'))
+            byRootName.set(posix.toLowerCase(), f.path);
+        longestPath = Math.max(longestPath, posix.length);
+    }
+    const lookup = (candidate, found) => {
+        const exact = byRepoPath.get(candidate);
+        if (exact)
+            found.add(exact);
+        if (!candidate.includes('/')) {
+            const root = byRootName.get(candidate.toLowerCase());
+            if (root)
+                found.add(root);
+        }
+    };
+    const targetCache = new Map();
+    const closureCache = new Map();
+    // Every primary file of a kind starts from the same set (itself and its
+    // siblings), so they share one closure object rather than one each.
+    const primaryClosures = new Map();
+    const targets = (filePath) => {
+        const cached = targetCache.get(filePath);
+        if (cached)
+            return cached;
+        const found = new Set();
+        const self = byPath.get(filePath);
+        if (self) {
+            for (const [raw] of self.content.matchAll(PATH_TOKEN)) {
+                if (raw.length > MAX_TOKEN_LENGTH)
+                    continue;
+                let start = raw.startsWith('@') ? 1 : 0;
+                if (raw.startsWith('./', start))
+                    start += 2;
+                let end = raw.length;
+                while (end > start && (raw[end - 1] === '.' || raw[end - 1] === '-'))
+                    end--;
+                // Only candidates no longer than the longest known path can match,
+                // which bounds the slicing per token.
+                if (end - start <= longestPath)
+                    lookup(raw.slice(start, end), found);
+                for (let i = raw.indexOf('/', start); i !== -1 && i < end; i = raw.indexOf('/', i + 1)) {
+                    if (end - i - 1 <= longestPath)
+                        lookup(raw.slice(i + 1, end), found);
+                }
+            }
+            for (const rel of imports.get(filePath) ?? []) {
+                if (byPath.has(rel))
+                    found.add(rel);
+            }
+            found.delete(filePath);
+        }
+        const result = [...found];
+        targetCache.set(filePath, result);
+        return result;
+    };
+    const closure = (filePath) => {
+        const self = byPath.get(filePath);
+        const primary = self !== undefined && isPrimaryInstructionFile(self.path);
+        const cached = primary ? primaryClosures.get(self.kind) : closureCache.get(filePath);
+        if (cached)
+            return cached;
+        const seen = new Set([filePath]);
+        // A .cursor/rules or .claude/rules set is loaded together, so its files
+        // count as one source of guidance.
+        if (primary) {
+            for (const f of files) {
+                if (f.kind === self.kind && isPrimaryInstructionFile(f.path))
+                    seen.add(f.path);
+            }
+        }
+        const queue = [...seen];
+        for (let i = 0; i < queue.length; i++) {
+            for (const next of targets(queue[i])) {
+                if (seen.has(next))
+                    continue;
+                seen.add(next);
+                queue.push(next);
+            }
+        }
+        if (primary)
+            primaryClosures.set(self.kind, seen);
+        else
+            closureCache.set(filePath, seen);
+        return seen;
+    };
+    return { targets, closure };
 }
 
 ;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/checks/fileSize.ts
@@ -44941,6 +47168,105 @@ function checkClaudeScript(filePath, content) {
     return issues;
 }
 
+;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/packageManager.ts
+
+
+
+
+const LOCKFILES = [
+    ['pnpm-lock.yaml', 'pnpm'],
+    ['yarn.lock', 'yarn'],
+    ['package-lock.json', 'npm'],
+    ['npm-shrinkwrap.json', 'npm'],
+    ['bun.lock', 'bun'],
+    ['bun.lockb', 'bun'],
+];
+// What Corepack accepts, including a `+sha512.<hex>` suffix. Anything else,
+// including control characters or a very long value, is not evidence.
+const DECLARED = /^(npm|pnpm|yarn|bun)@[0-9A-Za-z.+-]{1,200}$/;
+/**
+ * The package manager a repository uses, from the `packageManager` field and
+ * the lockfiles present. Returns null when the evidence is missing or
+ * disagrees, so no finding is made on a guess.
+ */
+function resolveExpectedPackageManager(declared, lockfiles) {
+    const fromLockfiles = new Set(lockfiles.flatMap((name) => LOCKFILES.filter(([file]) => file === name).map(([, pm]) => pm)));
+    if (declared !== null) {
+        const match = DECLARED.exec(declared);
+        if (!match)
+            return null;
+        const manager = match[1];
+        if ([...fromLockfiles].some((pm) => pm !== manager))
+            return null;
+        return { manager, evidence: [`packageManager: ${declared}`, ...lockfiles] };
+    }
+    if (fromLockfiles.size !== 1)
+        return null;
+    return { manager: [...fromLockfiles][0], evidence: lockfiles };
+}
+/**
+ * The resolved path of `target` when it is a regular file that, after
+ * resolving symlinks, stays inside the repository; otherwise null. Callers
+ * read the resolved path, so the file checked is the file read.
+ */
+async function resolveInside(realRepo, target) {
+    const real = await promises_default().realpath(target).catch(() => null);
+    if (real === null || !fs_safePath_isWithin(realRepo, real))
+        return null;
+    const stat = await promises_default().stat(real).catch(() => null);
+    return stat?.isFile() ? real : null;
+}
+async function lockfilesIn(realRepo, dir) {
+    const found = [];
+    for (const [name] of LOCKFILES) {
+        if ((await resolveInside(realRepo, external_node_path_default().join(dir, name))) !== null)
+            found.push(name);
+    }
+    return found;
+}
+async function declaredIn(realRepo, dir) {
+    const file = await resolveInside(realRepo, external_node_path_default().join(dir, 'package.json'));
+    if (file === null)
+        return null;
+    try {
+        const pkg = JSON.parse(await fs_readTextFile_readTextFile(file));
+        return typeof pkg?.packageManager === 'string' ? pkg.packageManager : null;
+    }
+    catch {
+        return null;
+    }
+}
+async function createPackageManagerLookup(repoPath) {
+    const realRepo = await promises_default().realpath(repoPath).catch(() => external_node_path_default().resolve(repoPath));
+    const root = resolveExpectedPackageManager(await declaredIn(realRepo, repoPath), await lockfilesIn(realRepo, repoPath));
+    const separate = new Map();
+    const isSeparateProject = (dir) => {
+        let pending = separate.get(dir);
+        if (!pending) {
+            const abs = external_node_path_default().join(repoPath, dir);
+            pending = (async () => (await lockfilesIn(realRepo, abs)).length > 0 ||
+                (await declaredIn(realRepo, abs)) !== null)();
+            separate.set(dir, pending);
+        }
+        return pending;
+    };
+    return {
+        async expectedFor(relativePath) {
+            if (root === null)
+                return null;
+            for (let dir = external_node_path_default().dirname(relativePath); dir !== '.' && dir !== '';) {
+                if (await isSeparateProject(dir))
+                    return null;
+                const parent = external_node_path_default().dirname(dir);
+                if (parent === dir)
+                    break;
+                dir = parent;
+            }
+            return root;
+        },
+    };
+}
+
 ;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/score.ts
 const DEDUCTIONS = {
     high: 20,
@@ -44968,8 +47294,24 @@ function computeScore(issues) {
     return { total, max: 100, grade: toGrade(total) };
 }
 
-;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/fs/readPackageJson.ts
+;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/fs/readRepoFile.ts
 
+
+
+
+/**
+ * Read a file by its repo-relative path, or '' when it is missing or resolves
+ * outside the repository (a symlink), so its contents never reach evidence.
+ */
+async function readRepoFile(repoPath, rel) {
+    const realRepo = await promises_default().realpath(repoPath).catch(() => repoPath);
+    const realFile = await promises_default().realpath(external_node_path_default().join(repoPath, rel)).catch(() => null);
+    if (realFile === null || !fs_safePath_isWithin(realRepo, realFile))
+        return '';
+    return fs_readTextFile_readTextFile(realFile);
+}
+
+;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/fs/readPackageJson.ts
 
 function toScripts(value) {
     if (typeof value !== 'object' || value === null || Array.isArray(value))
@@ -44982,7 +47324,7 @@ function toScripts(value) {
     return scripts;
 }
 async function readPackageScripts(repoPath) {
-    const raw = await fs_readTextFile_readTextFile(external_node_path_default().join(repoPath, 'package.json'));
+    const raw = await readRepoFile(repoPath, 'package.json');
     if (raw === '')
         return null;
     try {
@@ -45094,15 +47436,50 @@ function filterSuppressedIssues(filePath, content, issues) {
 
 
 
+
+
+
+
+
+// Extensions of the bare file names `broken-references` checks.
+const BARE_NAME_PATTERNS = ['md', 'mdx', 'json', 'jsonc', 'yaml', 'yml', 'toml', 'sh'].map((ext) => `**/*.${ext}`);
+/**
+ * Lookup of bare file names (`RELEASING.md`) anywhere in the repository. The
+ * first lookup walks the tree once, like context-file discovery does, and
+ * later lookups use the collected names. Symlinked directories are not
+ * traversed, so the walk stays inside the repository.
+ */
+function createNameLookup(repoPath) {
+    let names = null;
+    return async (name) => {
+        names ??= out_default()(BARE_NAME_PATTERNS, {
+            cwd: repoPath,
+            dot: true,
+            onlyFiles: false,
+            followSymbolicLinks: false,
+            suppressErrors: true,
+            caseSensitiveMatch: false,
+            deep: 12,
+            ignore: ['**/node_modules/**', '**/.git/**'],
+        }).then((matches) => new Set(matches.map((match) => external_node_path_default().posix.basename(match))));
+        return (await names).has(name);
+    };
+}
 /**
  * References from `filePath` that resolve to nothing, trying the repository
  * root and then the file's own directory. Paths that would resolve outside
- * the repository are never probed.
+ * the repository are never probed. A missing directory that the root
+ * .gitignore matches is expected to be absent, and a bare file name counts as
+ * present when a file with that name exists anywhere in the repository.
  */
-async function findMissingReferences(repoPath, filePath, content) {
+async function findMissingReferences(repoPath, filePath, content, context) {
     const missing = new Set();
     const bases = [repoPath, external_node_path_default().resolve(repoPath, external_node_path_default().dirname(filePath))];
-    for (const { target } of extractFileReferences(content)) {
+    const realRepo = await promises_default().realpath(repoPath).catch(() => repoPath);
+    // A candidate only counts when its real path stays inside the repository, so
+    // a symlinked directory cannot be used to probe for files outside it.
+    const existsInside = (candidate) => promises_default().realpath(candidate).then((real) => fs_safePath_isWithin(realRepo, real), () => false);
+    for (const { target, bare } of extractFileReferences(content)) {
         // ESM TypeScript imports name `.js` files whose source is `.ts`.
         const names = /\.[cm]?js$/.test(target)
             ? [target, target.replace(/\.([cm]?)js$/, '.$1ts'), target.replace(/\.js$/, '.tsx')]
@@ -45114,64 +47491,47 @@ async function findMissingReferences(repoPath, filePath, content) {
             continue;
         let found = false;
         for (const candidate of candidates) {
-            if (await promises_default().stat(candidate).then(() => true, () => false)) {
+            if (await existsInside(candidate)) {
                 found = true;
                 break;
             }
         }
-        if (!found)
-            missing.add(target);
+        if (found)
+            continue;
+        if (target.endsWith('/') &&
+            candidates.some((candidate) => context.gitignore.ignores(auditRepo_toPosix(external_node_path_default().relative(repoPath, candidate)), true))) {
+            continue;
+        }
+        if (bare && (await context.nameExists(target)))
+            continue;
+        missing.add(target);
     }
     return missing;
 }
-/**
- * Read a file by its repo-relative path, or '' when it is missing or resolves
- * outside the repository (a symlink), so its contents never reach evidence.
- */
-async function readRepoFile(repoPath, rel) {
-    const realRepo = await promises_default().realpath(repoPath).catch(() => repoPath);
-    const realFile = await promises_default().realpath(external_node_path_default().join(repoPath, rel)).catch(() => null);
-    if (realFile === null || !fs_safePath_isWithin(realRepo, realFile))
-        return '';
-    return fs_readTextFile_readTextFile(realFile);
-}
 async function readMakeTargets(repoPath) {
     for (const name of ['GNUmakefile', 'makefile', 'Makefile']) {
-        const content = await fs_readTextFile_readTextFile(external_node_path_default().join(repoPath, name));
+        const content = await readRepoFile(repoPath, name);
         if (content !== '')
             return parseMakeTargets(content);
     }
     return null;
 }
-function toPosix(p) {
+// Guidance a file delegates to is read up to this many characters in total,
+// which keeps the joined text far below the engine's string length limit.
+const MAX_STRUCTURAL_CHARS = 4 * 1024 * 1024;
+function joinWithinBudget(contents) {
+    const parts = [];
+    let size = 0;
+    for (const content of contents) {
+        if (size + content.length > MAX_STRUCTURAL_CHARS)
+            continue;
+        parts.push(content);
+        size += content.length + 1;
+    }
+    return parts.join('\n');
+}
+function auditRepo_toPosix(p) {
     return p.replace(/\\/g, '/');
-}
-/** True when `content` points at `target`, by repo path, `@path` import, or root file name. */
-function references(content, target) {
-    const posix = toPosix(target);
-    if (content.includes(posix))
-        return true;
-    return (!posix.includes('/') &&
-        new RegExp(`(^|[\\s@(\\[\`'"/])${escapeRegExp(posix)}\\b`, 'i').test(content));
-}
-function escapeRegExp(value) {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-/**
- * Text the structural checks (safety, validation, final report) evaluate for a
- * primary file. Guidance often lives in one shared place: CLAUDE.md says
- * "Follow AGENTS.md", and a .cursor/rules set spreads it over several files.
- * A file therefore counts as covered by its own content, by context files it
- * references, and by other primary files for the same tool.
- */
-function structuralContext(filePath, files) {
-    const self = files.find((f) => f.path === filePath);
-    if (!self)
-        return '';
-    const related = files.filter((f) => f.path !== filePath &&
-        (references(self.content, f.path) ||
-            (f.kind === self.kind && isPrimaryInstructionFile(f.path))));
-    return [self.content, ...related.map((f) => f.content)].join('\n');
 }
 async function auditRepo_auditRepo(repoPath, opts = {}) {
     const absoluteRepo = external_node_path_default().resolve(repoPath);
@@ -45180,6 +47540,7 @@ async function auditRepo_auditRepo(repoPath, opts = {}) {
     const contextFiles = await detectContextFiles(absoluteRepo, opts.ignoreFiles ?? []);
     const packageScripts = await readPackageScripts(absoluteRepo);
     const makeTargets = await readMakeTargets(absoluteRepo);
+    const packageManagers = packageScripts === null ? null : await createPackageManagerLookup(absoluteRepo);
     const issues = [];
     if (contextFiles.length === 0) {
         issues.push({
@@ -45200,6 +47561,49 @@ async function auditRepo_auditRepo(repoPath, opts = {}) {
         const content = await fs_readTextFile_readTextFile(external_node_path_default().resolve(absoluteRepo, ctxFile.path));
         fileContents.push({ path: ctxFile.path, kind: ctxFile.kind, content });
     }
+    const referenceContext = {
+        gitignore: parseGitignore(await readRepoFile(absoluteRepo, '.gitignore')),
+        nameExists: createNameLookup(absoluteRepo),
+    };
+    // Structural checks see a file together with everything it delegates to
+    // ("Follow AGENTS.md", `@docs/guide.md`), so a pointer file is not told to
+    // copy guidance it already inherits.
+    const { imported, imports } = await loadImportedFiles(fileContents, (rel) => readRepoFile(absoluteRepo, rel));
+    const instructionFiles = [...fileContents, ...imported];
+    const contentByPath = new Map(instructionFiles.map((f) => [f.path, f.content]));
+    const delegation = buildDelegationGraph(instructionFiles, imports);
+    const runStructuralChecks = (filePath, text) => [
+        ...(disabled.has('safety-boundaries') ? [] : checkSafetyBoundaries(filePath, text)),
+        ...(disabled.has('validation-commands') ? [] : checkValidationCommands(filePath, text)),
+        ...(disabled.has('final-reporting') ? [] : checkFinalReporting(filePath, text)),
+    ];
+    // Files with the same closure (every file in a rules directory) share one
+    // closure object and one evaluation, so the work grows with the number of
+    // distinct closures, not with the number of files times their combined size.
+    const gapsByClosure = new Map();
+    const structuralFindings = new Map();
+    for (const { path: filePath } of fileContents) {
+        if (!isPrimaryInstructionFile(filePath))
+            continue;
+        const closure = delegation.closure(filePath);
+        let gaps = gapsByClosure.get(closure);
+        if (!gaps) {
+            const text = joinWithinBudget([...closure].map((p) => contentByPath.get(p) ?? ''));
+            gaps = new Set(runStructuralChecks(filePath, text).map((issue) => issue.category));
+            gapsByClosure.set(closure, gaps);
+        }
+        // Each structural check reports at most one file-level issue whose fields
+        // do not depend on the text, so empty text yields the issue for each gap.
+        const missing = gaps;
+        structuralFindings.set(filePath, runStructuralChecks(filePath, '').filter((issue) => missing.has(issue.category)));
+    }
+    // A file that delegates to a primary file with the same gap leaves the
+    // finding to that file, the single source of truth, unless the target
+    // delegates back (a cycle), where every file in it keeps its finding.
+    const reportedByTarget = (filePath, category) => delegation
+        .targets(filePath)
+        .some((target) => (structuralFindings.get(target) ?? []).some((i) => i.category === category) &&
+        !delegation.closure(target).has(filePath));
     for (const { path: filePath, content } of fileContents) {
         const fileIssues = [];
         if (!disabled.has('hidden-characters')) {
@@ -45218,7 +47622,7 @@ async function auditRepo_auditRepo(repoPath, opts = {}) {
             fileIssues.push(...checkPlaceholderContent(filePath, content));
         }
         if (!disabled.has('broken-references')) {
-            const missing = await findMissingReferences(absoluteRepo, filePath, content);
+            const missing = await findMissingReferences(absoluteRepo, filePath, content, referenceContext);
             fileIssues.push(...checkBrokenReferences(filePath, content, missing));
         }
         if (!disabled.has('risky-language')) {
@@ -45231,6 +47635,8 @@ async function auditRepo_auditRepo(repoPath, opts = {}) {
                     return !scriptMatch || !allowedScripts.has(scriptMatch[1]);
                 });
                 fileIssues.push(...cmdIssues);
+                const expected = (await packageManagers?.expectedFor(filePath)) ?? null;
+                fileIssues.push(...checkPackageManagerAlignment(filePath, content, expected));
             }
             else {
                 fileIssues.push(...checkCommandsWithoutPackageJson(filePath, content));
@@ -45241,16 +47647,7 @@ async function auditRepo_auditRepo(repoPath, opts = {}) {
             if (!disabled.has('file-size')) {
                 fileIssues.push(...checkFileSize(filePath, content, opts.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES));
             }
-            const structural = structuralContext(filePath, fileContents);
-            if (!disabled.has('safety-boundaries')) {
-                fileIssues.push(...checkSafetyBoundaries(filePath, structural));
-            }
-            if (!disabled.has('validation-commands')) {
-                fileIssues.push(...checkValidationCommands(filePath, structural));
-            }
-            if (!disabled.has('final-reporting')) {
-                fileIssues.push(...checkFinalReporting(filePath, structural));
-            }
+            fileIssues.push(...(structuralFindings.get(filePath) ?? []).filter((issue) => !reportedByTarget(filePath, issue.category)));
         }
         issues.push(...filterSuppressedIssues(filePath, content, fileIssues));
     }
