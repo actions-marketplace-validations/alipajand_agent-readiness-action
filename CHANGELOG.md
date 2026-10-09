@@ -6,6 +6,8 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-09
+
 ### Changed
 
 - Bundled engines moved to the latest `main`: agent-readiness-kit `255b0c4` → `b490a30` and agent-context-doctor `e05693d` → `1ebc6f0`. Action inputs, outputs, and the PR comment format are unchanged.
@@ -92,6 +94,7 @@ First release.
 - CI that runs tests, type checks, verifies the committed `dist/`, and runs the action against this repository.
 - Dependabot for npm, the kit submodule, and GitHub Actions. MIT `LICENSE` file.
 
-[Unreleased]: https://github.com/alipajand/agent-readiness-action/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/alipajand/agent-readiness-action/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/alipajand/agent-readiness-action/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/alipajand/agent-readiness-action/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/alipajand/agent-readiness-action/releases/tag/v1.0.0
