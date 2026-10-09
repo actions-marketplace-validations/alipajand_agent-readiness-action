@@ -12,6 +12,9 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ### Fixed
 
+- Bundled engines moved to the latest `main`: agent-readiness-kit `3c156af` → `255b0c4` (README and dev-dependency changes only) and agent-context-doctor `d36dd9d` → `c0338d9`, which brings two `context-audit` fixes:
+  - A repository with no agent context files now scores 0 (`risky`) instead of 80 (`good`).
+  - `command-alignment` no longer reports a package manager version (`pnpm 11`, `npm v10.x`, `pnpm@9.12.0`) as a missing script.
 - The log shows repository-wide context issues, such as missing instruction files, as `(repository)` like the job summary already did, instead of the runner's checkout path.
 
 ## [1.0.1] - 2026-09-24
