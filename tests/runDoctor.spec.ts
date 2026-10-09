@@ -37,6 +37,30 @@ describe('runContextAudit', () => {
     expect(result.issues.some((i) => i.category === 'risky-language')).toBe(false);
   });
 
+  it('resolves a relative repo path against GITHUB_WORKSPACE by default', async () => {
+    await writeFile(path.join(repo, 'AGENTS.md'), '# Agents\n');
+    const original = process.env.GITHUB_WORKSPACE;
+    process.env.GITHUB_WORKSPACE = workspace;
+    try {
+      const result = await runContextAudit('repo');
+      expect(result.repoPath).toBe(repo);
+    } finally {
+      if (original === undefined) delete process.env.GITHUB_WORKSPACE;
+      else process.env.GITHUB_WORKSPACE = original;
+    }
+  });
+
+  it('falls back to the working directory without GITHUB_WORKSPACE', async () => {
+    const original = process.env.GITHUB_WORKSPACE;
+    delete process.env.GITHUB_WORKSPACE;
+    try {
+      const result = await runContextAudit(repo);
+      expect(result.repoPath).toBe(repo);
+    } finally {
+      if (original !== undefined) process.env.GITHUB_WORKSPACE = original;
+    }
+  });
+
   it('reports a repository without instruction files', async () => {
     const result = await runContextAudit(repo, workspace);
     expect(result.issues.map((i) => i.category)).toEqual(['presence']);
