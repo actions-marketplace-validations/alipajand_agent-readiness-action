@@ -6,13 +6,25 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ## [Unreleased]
 
-### Security
-
-- Bundled agent-context-doctor moved `c0338d9` → `e05693d`. With `context-audit: 'true'`, an audited repository's `.acdrc` `rules.ignoreFiles` pattern that nests braces more than 10 levels deep or expands to more than 1,000 patterns now fails as a config error. Before, a deeply nested pattern could exhaust the stack in `braces` (GHSA-vfj7-8cjw-p6xm, no patched release) and a short run of sibling groups could exhaust memory. Valid brace patterns are unaffected. `braces` itself is still bundled.
-
 ### Changed
 
+- Bundled engines moved to the latest `main`: agent-readiness-kit `255b0c4` → `b490a30` and agent-context-doctor `e05693d` → `1ebc6f0`. Action inputs, outputs, and the PR comment format are unchanged.
+- Readiness scores are ecosystem-aware (agent-readiness-kit#27, #28). Node.js, Python, Go, and Rust are detected from their manifests, and the lockfile, version pin, test runner, linter, formatter, and `.gitignore` signals count each ecosystem's own files (`go.sum`, `uv.lock`, the `go` directive, `requires-python`, pytest config, `go test`, ruff, golangci-lint, and so on). Test files are detected in Go, Python, Rust, Ruby, Java/Kotlin, and C#, and workflow commands are read from `Makefile`, `justfile`, `Taskfile`, `pyproject.toml`, `tox.ini`, and `noxfile.py`. Category maxima and the 0–100 scale are unchanged. What this means for existing workflows:
+  - Node.js-only repositories keep their score, apart from evidence the engine used to miss (nested configs, pre-commit and lefthook hooks).
+  - Python, Go, and Rust repositories usually score higher.
+  - Polyglot repositories are scored on every detected stack: a signal is worth `floor(points × satisfied / detected)`. A Node.js and Python repository with Node.js tooling only can score lower than before and may fall below `min-score`. Add the missing stack's lockfile, version pin, linter, or formatter, or adjust `min-score`.
+  - `baseline-ref` audits the base commit with the same bundled engine, so upgrading the action does not by itself produce a `score-delta` or trip `max-score-drop`.
+  - The raw JSON from `json: 'true'` and the `output` Markdown report include the detected `ecosystems`.
+- `context-audit` checks are more accurate (agent-context-doctor#59–#66), so `context-score`, `context-grade`, `context-issue-count`, and `context-fail-on` results can change:
+  - New issues: commands for a package manager the repository does not use (`command-alignment`, medium); AGENTS.md and CLAUDE.md naming different package managers, or disagreeing on skipping tests (`contradictions`); advice to skip tests in other words, such as "If the tests are slow, skip them and rely on CI" (`risky-language`, high); and missing root-level files named in inline code, such as `` `RELEASING.md` `` (`broken-references`).
+  - Fewer false positives: reporting guidance in plain words and Python, Go, Rust, make, and JVM validation commands are recognised; a `CLAUDE.md` that only delegates to `AGENTS.md` (`@AGENTS.md`, "Follow AGENTS.md") no longer repeats that file's issues; and paths described as ignored or matched by `.gitignore` (`.idea/`) are not reported as missing.
+
 - Bundled engines moved to the latest `main`: agent-readiness-kit `a993d17` → `3c156af` and agent-context-doctor `0855961` → `d36dd9d`. Both updates are README and dev-dependency changes only, so audit results and `dist/` are unchanged.
+
+### Security
+
+- agent-readiness-kit keeps root file reads inside the repository and no longer enters symlinked directories named in a glob pattern, so a symlink in the audited repository cannot point the audit at files outside it.
+- Bundled agent-context-doctor moved `c0338d9` → `e05693d`. With `context-audit: 'true'`, an audited repository's `.acdrc` `rules.ignoreFiles` pattern that nests braces more than 10 levels deep or expands to more than 1,000 patterns now fails as a config error. Before, a deeply nested pattern could exhaust the stack in `braces` (GHSA-vfj7-8cjw-p6xm, no patched release) and a short run of sibling groups could exhaust memory. Valid brace patterns are unaffected. `braces` itself is still bundled.
 
 ### Fixed
 
