@@ -314,6 +314,26 @@ describe('index run() — summary, outputs, and baseline', () => {
     expect(summaryAddRaw).not.toHaveBeenCalled();
   });
 
+  it('does not fail when the job summary cannot be written', async () => {
+    summaryWrite.mockRejectedValue(new Error('Unable to find environment variable'));
+    await loadIndex();
+    expect(setFailed).not.toHaveBeenCalled();
+    expect(setOutput).toHaveBeenCalledWith('score', '72');
+
+    vi.clearAllMocks();
+    summaryWrite.mockRejectedValue('no summary file');
+    await loadIndex();
+    expect(setFailed).not.toHaveBeenCalled();
+  });
+
+  it('reports a score increase against baseline-ref', async () => {
+    inputs = { 'baseline-ref': 'base-sha' };
+    auditAtRef.mockResolvedValue(70);
+    await loadIndex();
+    expect(setOutput).toHaveBeenCalledWith('score-delta', '2');
+    expect(summaryAddRaw).toHaveBeenCalledWith(expect.stringContaining('▲ +2 vs'));
+  });
+
   it('sets passed and categories outputs', async () => {
     inputs = { 'min-score': '80' };
     await loadIndex();
@@ -366,6 +386,11 @@ describe('index run() — summary, outputs, and baseline', () => {
     expect(setFailed).toHaveBeenCalledWith(
       expect.stringContaining('Baseline audit failed: not available'),
     );
+
+    vi.clearAllMocks();
+    auditAtRef.mockRejectedValue('git exited with 128');
+    await loadIndex();
+    expect(setFailed).toHaveBeenCalledWith('Baseline audit failed: git exited with 128');
   });
 });
 
@@ -419,6 +444,19 @@ describe('index run() — context audit', () => {
     inputs = { 'context-audit': 'true', 'context-fail-on': 'high' };
     await loadIndex();
     expect(setFailed).toHaveBeenCalledWith(expect.stringContaining('at or above "high"'));
+  });
+
+  it('fails clearly when the context audit throws', async () => {
+    inputs = { 'context-audit': 'true' };
+    runContextAudit.mockRejectedValue(new Error('cannot read .acdrc'));
+    await loadIndex();
+    expect(setFailed).toHaveBeenCalledWith('agent-context-doctor failed: cannot read .acdrc');
+    expect(setOutput).not.toHaveBeenCalledWith('context-score', expect.anything());
+
+    vi.clearAllMocks();
+    runContextAudit.mockRejectedValue('boom');
+    await loadIndex();
+    expect(setFailed).toHaveBeenCalledWith('agent-context-doctor failed: boom');
   });
 
   it('validates context-fail-on and requires context-audit', async () => {

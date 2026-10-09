@@ -6,8 +6,11 @@ import {
   formatLogSummary,
   formatLogDetail,
   formatMarkdownComment,
+  formatDelta,
+  formatContextSection,
 } from '../src/formatSummary';
 import type { AuditResult } from '../src/runArk';
+import type { ContextAuditResult, ContextIssue } from '../src/runDoctor';
 
 const FULL_RESULT: AuditResult = {
   repoPath: '/repo',
@@ -324,5 +327,63 @@ describe('codeSpan and escapeMarkdown', () => {
     const start = Date.now();
     tableCodeSpan('\\'.repeat(200_000));
     expect(Date.now() - start).toBeLessThan(1000);
+  });
+});
+
+describe('formatDelta', () => {
+  const comparison = { baselineScore: 70, baselineRef: 'main' };
+
+  it.each([
+    [75, '▲ +5 vs `main`'],
+    [64, '▼ -6 vs `main`'],
+    [70, 'no change vs `main`'],
+  ])('describes a score of %i against a baseline of 70', (score, expected) => {
+    expect(formatDelta(score, comparison)).toBe(expected);
+  });
+
+  it('shows "no change" in the comment when the score matches the baseline', () => {
+    expect(
+      formatMarkdownComment(FULL_RESULT, { baselineScore: 72, baselineRef: 'main' }),
+    ).toContain('(no change vs `main`, was 72)');
+  });
+});
+
+describe('formatContextSection — long issue lists', () => {
+  const issue = (n: number, line?: number): ContextIssue => ({
+    id: `i${n}`,
+    severity: 'low',
+    category: 'placeholder-content',
+    file: `docs/file${n}.md`,
+    line,
+    message: `Issue ${n}`,
+    recommendation: 'Fix it.',
+  });
+
+  const result: ContextAuditResult = {
+    repoPath: '/repo',
+    files: [],
+    summary: { fileCount: 10, issueCount: 10, high: 0, medium: 0, low: 10 },
+    score: { total: 90, max: 100, grade: 'good' },
+    issues: [issue(0), ...Array.from({ length: 9 }, (_, n) => issue(n + 1, n + 1))],
+  };
+
+  it('shows the first eight issues and counts the rest', () => {
+    const md = formatContextSection(result);
+    expect(md.match(/^\| low \|/gm)).toHaveLength(8);
+    expect(md).toContain('_…and 2 more_');
+  });
+
+  it('omits the issue table when there are no issues', () => {
+    const md = formatContextSection({
+      ...result,
+      summary: { fileCount: 1, issueCount: 0, high: 0, medium: 0, low: 0 },
+      issues: [],
+    });
+    expect(md).toContain('1 instruction file checked');
+    expect(md).not.toContain('| Severity |');
+  });
+
+  it('shows the file alone for an issue without a line', () => {
+    expect(formatContextSection(result)).toContain('| low | `docs/file0.md` | Issue 0 |');
   });
 });
