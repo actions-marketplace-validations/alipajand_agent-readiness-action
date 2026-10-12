@@ -13,7 +13,8 @@ skill, the Claude Code and Cursor plugin, and the MCP server. Integration releas
 - [x] `integrations/tests/adversarial.spec.ts` asserts the configured-credential case (a value under
       `env.API_TOKEN` in a one-line `.mcp.json` never appears in the output); it fails against the
       previous engine
-- [ ] CI passes on the final commit of the pull request (Linux, Node.js 22.13.0 and 24)
+- [x] CI passes on the final commit of the pull request (Linux, Node.js 22.13.0 and 24): all six
+      checks passed on `0b4cc20`, including CodeQL
 - [ ] The live-client checks in § 3 pass
 
 ## 1. Versions

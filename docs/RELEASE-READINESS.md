@@ -49,7 +49,12 @@ doctor's changelog does not affect `baseline-ref`.
 | `npm pack` of the MCP package twice                                        | Byte-identical tarballs (SHA-256 `d1cab977…`)                                                                                                                                                                                                                                                                                     |
 | Action vs skill                                                            | Same readiness score, all 13 category scores, context score, grade, and issue count on 27 repositories and fixtures                                                                                                                                                                                                               |
 | Credential sweep                                                           | Four synthetic credentials (a GitHub token, an AWS key id, a second GitHub token, and a configured MCP `env` value) absent from the action's log, summary, and outputs, the plugin's skill JSON and Markdown, and every MCP tool result including `include_raw`. The same sweep finds 21 leaks in the previous commit's artifacts |
-| GitHub CI                                                                  | Linux, Node.js 22.13.0 and 24; see the pull request checks for the final commit                                                                                                                                                                                                                                                   |
+| GitHub CI                                                                  | Passed on `0b4cc20`: build and tests, the action run on this repository, integrations on Node.js 22.13.0 and 24, and CodeQL                                                                                                                                                                                                       |
+
+The credential sweep is regression evidence for known credential shapes, not proof that no secret
+can appear in a report. Detection is pattern-based: a credential in an unrecognised format, file
+paths, and the other cases under "Best effort or not masked" in
+[SECURITY-FINDINGS.md](SECURITY-FINDINGS.md) are shown as written.
 
 ## Runtime redaction after the engine update
 
