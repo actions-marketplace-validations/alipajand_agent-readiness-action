@@ -1,16 +1,16 @@
 # Release readiness
 
-Status on 2026-10-12, after the live client tests for the first integrations release. The GitHub
-Action is released as v1.2.0 and `v1` points to it. No integration has been published, tagged, or
-submitted.
+Status on 2026-10-12, after the first integrations release (`integrations-v0.1.1`). The GitHub
+Action is released as v1.2.0 and `v1` points to it. The integrations are tagged and released on GitHub; nothing is
+published to npm, the MCP Registry, or any marketplace.
 
 ## Verdict
 
-| Release                                                                          | Verdict                                                                                                                                                                                                                                         |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GitHub Action v1.2.0                                                             | **Released.** Tag `v1.2.0` and `v1` at `8e3b737`, tested in a consumer workflow before `v1` moved                                                                                                                                               |
-| Integrations 0.1.1: skill, Claude Code plugin, MCP server (npm and MCP Registry) | **Ready to release after the release branch is merged and its CI passes.** Live tests in Claude Code passed after two permission fixes on that branch. The tested path is invoking the audit by name; plain-language invocation is not verified |
-| Integrations 0.1.1: Cursor plugin                                                | **Blocked for the Cursor Marketplace: not tested.** Cursor is not installed on the build machine. This blocks only the Cursor submission, not the other integrations                                                                            |
+| Release                                                                          | Verdict                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub Action v1.2.0                                                             | **Released.** Tag `v1.2.0` and `v1` at `8e3b737`, tested in a consumer workflow before `v1` moved                                                                                                                                                                                                                                                                                                                                                     |
+| Integrations 0.1.1: skill, Claude Code plugin, MCP server (npm and MCP Registry) | **Released on GitHub** as [`integrations-v0.1.1`](https://github.com/alipajand/agent-readiness-action/releases/tag/integrations-v0.1.1) (merge commit `30e26e1`): the skill and the Claude Code plugin install from the public repository at 0.1.1. **The MCP package is not yet published** to npm or the MCP Registry; it packs reproducibly from the tag. The tested path is invoking the audit by name; plain-language invocation is not verified |
+| Integrations 0.1.1: Cursor plugin                                                | **Blocked for the Cursor Marketplace: not tested.** Cursor is not installed on the build machine. This blocks only the Cursor submission, not the other integrations                                                                                                                                                                                                                                                                                  |
 
 No security finding is open apart from D (dev-only, see [SECURITY-FINDINGS.md](SECURITY-FINDINGS.md)).
 
@@ -118,9 +118,8 @@ planted credentials, so an engine update that dropped its masking would fail CI.
 
 ## Remaining blockers
 
-| Blocker                     | Severity                          | Evidence                                  | Owner action                                                           |
-| --------------------------- | --------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------- |
-| Integrations release branch | Release gate                      | Two permission fixes from the live run    | Review and merge it after CI passes, then tag `integrations-v0.1.1`    |
-| Cursor plugin               | Blocks the Cursor submission only | Not tested                                | `RELEASE-CHECKLIST.md` § 3 before submitting to the Cursor Marketplace |
-| Windows                     | Only if listed as supported       | Not tested                                | Run the skill script and the MCP server once, or keep Windows unlisted |
-| npm publish, MCP Registry   | Owner steps                       | Package and `server.json` ready and valid | `RELEASE-CHECKLIST.md` § 4                                             |
+| Blocker                   | Severity                          | Evidence                                  | Owner action                                                           |
+| ------------------------- | --------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------- |
+| Cursor plugin             | Blocks the Cursor submission only | Not tested                                | `RELEASE-CHECKLIST.md` § 3 before submitting to the Cursor Marketplace |
+| Windows                   | Only if listed as supported       | Not tested                                | Run the skill script and the MCP server once, or keep Windows unlisted |
+| npm publish, MCP Registry | Owner steps                       | Package and `server.json` ready and valid | `RELEASE-CHECKLIST.md` § 4                                             |

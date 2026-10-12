@@ -146,6 +146,6 @@ Owner actions are marked ☐ and happen outside this repository.
       signed-in session to confirm variable substitution (2026-10-12, headless)
 - [x] Install from the GitHub marketplace into an empty `CLAUDE_CONFIG_DIR` (2026-10-12)
 - [x] The release commit is on `main`: `claude plugin marketplace add alipajand/agent-readiness-action` works
-- ☐ Merge the integrations release branch and tag `integrations-v0.1.1`
+- [x] Release `integrations-v0.1.1` (2026-10-12); a clean marketplace install gives 0.1.1
 - ☐ Optional: submit to Anthropic's directory at <https://claude.ai/directory/manage> (requires a
   paid claude.ai plan; the portal applies extra rules the CLI does not check)

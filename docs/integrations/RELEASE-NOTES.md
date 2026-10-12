@@ -3,7 +3,10 @@
 The skill, the Claude Code and Cursor plugin, and the MCP server are released together under
 `integrations-v<version>` tags. Those tags are independent of the GitHub Action's `v` tags.
 
-## 0.1.1 (unreleased)
+## 0.1.1 (2026-10-12)
+
+Tag `integrations-v0.1.1` (merge commit `30e26e1`); [GitHub release](https://github.com/alipajand/agent-readiness-action/releases/tag/integrations-v0.1.1). The MCP package is
+not yet published to npm or the MCP Registry.
 
 First release. It packages the same pinned engines as agent-readiness-action v1.2.0 for local
 use by AI coding agents: read-only, offline scanning with no LLM scoring.
