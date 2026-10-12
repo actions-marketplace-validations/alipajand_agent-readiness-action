@@ -6,6 +6,8 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-12
+
 ### Added
 
 - Portable integrations built from the same pinned engines, in a new `integrations/` workspace package. The action's inputs and outputs are unchanged; its `dist/` changes only through the engine update below.
@@ -111,7 +113,8 @@ First release.
 - CI that runs tests, type checks, verifies the committed `dist/`, and runs the action against this repository.
 - Dependabot for npm, the kit submodule, and GitHub Actions. MIT `LICENSE` file.
 
-[Unreleased]: https://github.com/alipajand/agent-readiness-action/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/alipajand/agent-readiness-action/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/alipajand/agent-readiness-action/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/alipajand/agent-readiness-action/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/alipajand/agent-readiness-action/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/alipajand/agent-readiness-action/releases/tag/v1.0.0
