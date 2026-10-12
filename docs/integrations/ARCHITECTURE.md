@@ -2,8 +2,8 @@
 
 This document covers the portable integrations built around the same two audit engines the GitHub
 Action bundles: a command-line runtime, an Agent Skill, Claude Code and Cursor plugins, and a local
-MCP server. The GitHub Action itself is described in [../ARCHITECTURE.md](../ARCHITECTURE.md) and
-is unchanged.
+MCP server. The GitHub Action itself is described in [../ARCHITECTURE.md](../ARCHITECTURE.md); the
+integrations do not change its code, inputs, or outputs.
 
 ## Audit findings that shaped the design
 

@@ -4,6 +4,16 @@ The GitHub Action keeps its own release steps (README, "Releasing"). This checkl
 skill, the Claude Code and Cursor plugin, and the MCP server. Integration releases use
 `integrations-v<version>` tags and never move the action's `v1` tag.
 
+## 0. Release gate
+
+- [ ] agent-context-doctor#74 is merged (security findings A, B, E, F), and
+      `vendor/agent-context-doctor` points at the merge commit on its `main`, not at a branch commit
+- [ ] The bump was made with the `bumping-bundled-engines` skill: `dist/`, the skill script, the MCP
+      bundles, and `provenance.generated.ts` rebuilt and committed together
+- [ ] `integrations/tests/adversarial.spec.ts` also asserts the configured-credential case (a value
+      under `env.API_TOKEN` in a one-line `.mcp.json` never appears in the output); it passes only
+      with the bumped engine
+
 ## 1. Versions
 
 All of these carry the same version (`integrations/tests/plugins.spec.ts`,
@@ -39,7 +49,9 @@ pnpm integrations:typecheck && pnpm integrations:build && pnpm integrations:test
 - [ ] `claude plugin validate .` and `claude plugin validate --strict plugins/agent-readiness`
 - [ ] `mcp-publisher validate integrations/mcp-package/server.json`
 - [ ] `pnpm audit`: no new advisories in shipped code (see `docs/SECURITY-FINDINGS.md` for known ones)
-- [ ] CI green on both Node.js 22.13.0 and 24
+- [ ] CI green on the final commit: `Test · Typecheck · Build`, `Run the action on this repository`,
+      both `Integrations` jobs (Node.js 22.13.0 and 24), and CodeQL
+- [ ] `npm pack` twice in `integrations/mcp-package` gives byte-identical tarballs
 
 ## 3. Manual client checks
 
@@ -48,14 +60,22 @@ pnpm integrations:typecheck && pnpm integrations:build && pnpm integrations:test
       prompt and reports the engine scores
 - [ ] Cursor: copy `plugins/agent-readiness` to `~/.cursor/plugins/local/agent-readiness`, reload,
       run the `agent-readiness-audit` command
-- [ ] One MCP host: add the server with `--root`, call `audit_repository` and `audit_agent_context`
+- [ ] One MCP host (Claude Code or Cursor): add the server with `--root`, call `audit_repository`
+      and `audit_agent_context`, and confirm the host shows no sandbox or startup error
+- [ ] Windows, if it is to be listed as supported: run the skill script and the MCP server once
 
 ## 4. Publish (owner only)
 
 - [ ] Merge to `main`, tag `integrations-v<version>`, push the tag
-- [ ] `npm publish` from `integrations/mcp-package` (2FA; with provenance from CI, or remove
-      `publishConfig.provenance` for a local publish)
-- [ ] `mcp-publisher login github`, then `mcp-publisher publish` from `integrations/mcp-package`
+- [ ] `npm publish` from `integrations/mcp-package` with 2FA. The package does not request npm
+      provenance: npm only generates it from a supported CI provider, and no workflow here
+      publishes. To publish with provenance, add a workflow with `id-token: write` that runs
+      `npm publish --provenance` (or npm trusted publishing) from this repository
+- [ ] `mcp-publisher login github` as `alipajand` (the `io.github.alipajand/*` namespace), then
+      `mcp-publisher publish` from `integrations/mcp-package`. The registry checks that the
+      published npm package's `mcpName` equals `server.json`'s `name`, so publish npm first
+- [ ] Release the action separately (README, "Releasing"): this branch changes `dist/` through the
+      engine updates, so it needs a new action version, not only an integrations tag
 - [ ] Cursor Marketplace: submit or update at <https://cursor.com/marketplace/publish>
 - [ ] Update statuses and evidence in `docs/PUBLISHING-MATRIX.md`
 

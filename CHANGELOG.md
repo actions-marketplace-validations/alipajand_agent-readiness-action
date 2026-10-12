@@ -8,15 +8,15 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ### Added
 
-- Portable integrations built from the same pinned engines, in a new `integrations/` workspace package. The action's inputs, outputs, and `dist/` are unchanged.
+- Portable integrations built from the same pinned engines, in a new `integrations/` workspace package. The action's inputs and outputs are unchanged; its `dist/` changes only through the engine update below.
   - Agent Skill `agent-readiness-audit` with a self-contained, read-only audit script (`plugins/agent-readiness/skills/agent-readiness-audit/`).
   - Claude Code and Cursor plugin `agent-readiness`, listed by `.claude-plugin/marketplace.json` and `.cursor-plugin/marketplace.json`.
-  - Local MCP server `@alipajand/agent-readiness-mcp` (`integrations/mcp-package/`, not yet published) with `audit_repository`, `audit_agent_context`, and `get_audit_report`.
+  - Local MCP server `@alipajand/agent-readiness-mcp` (`integrations/mcp-package/`, not yet published) with `audit_repository`, `audit_agent_context`, and `get_audit_report`. Each audit runs in a worker confined by Node's permission model, so the server needs Node.js 22.13 or later (23.5 or later on Node.js 23) and refuses to start on older releases; the skill script runs on 22.12.
   - CI job that rebuilds and checks the committed bundles and runs the integration tests on Node.js 22.13 and 24.
 
 ### Security
 
-- Bundled engines moved to the latest `main`: agent-readiness-kit `b490a30` → `f15924b` (agent-readiness-kit#33) and agent-context-doctor `d70de51` → `03fa7f7` (agent-context-doctor#73). Both replace `fast-glob` with `tinyglobby`, so `braces` is no longer installed or compiled into `dist/` and the integration bundles. `braces` 3.0.3 has a stack-exhaustion advisory with no patched release (GHSA-vfj7-8cjw-p6xm). File discovery is unchanged: symlinked directories are still not walked, and the `.acdrc` brace limits still apply. The action's `fast-glob` dependency, which only supplied the engines, is replaced by `tinyglobby`.
+- Bundled engines moved to the latest `main`: agent-readiness-kit `b490a30` → `f15924b` (agent-readiness-kit#33) and agent-context-doctor `d70de51` → `03fa7f7` (agent-context-doctor#73). Both replace `fast-glob` with `tinyglobby`, so `braces` is no longer installed or compiled into `dist/` and the integration bundles. `braces` 3.0.3 has a stack-exhaustion advisory with no patched release (GHSA-vfj7-8cjw-p6xm). Symlinked directories are still not walked, and the `.acdrc` brace limits still apply. The action's `fast-glob` dependency, which only supplied the engines, is replaced by `tinyglobby`. One behavior changes, on case-insensitive filesystems only (macOS and Windows runners): the readiness engine's lookups of fixed file names such as `README.md`, `CHANGELOG.md`, `package.json`, or `.tool-versions` now match the exact case, as they always did on Linux. A repository with `Readme.md` audited on a macOS runner loses the README documentation points it got before (one point on the test fixture), the same result Linux runners give. Otherwise the old and new `dist/` gave identical output on 21 local repositories and on a fixture of symlinks, brace patterns, mixed-case names, and deep nesting; on a case-sensitive volume, as on Linux, that fixture matched too.
 
 ## [1.1.0] - 2026-10-09
 

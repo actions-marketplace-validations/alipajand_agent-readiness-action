@@ -25,7 +25,8 @@ three tools are annotated read-only.
 
 ## Install
 
-Requires Node.js 22.12 or later (22.13+ adds the worker sandbox described below).
+Requires Node.js 22.13 or later (23.5 or later on Node.js 23). Older releases have no stable
+permission model for the audit sandbox described below, and the server refuses to start on them.
 
 ```bash
 npm install -g @alipajand/agent-readiness-mcp@0.1.0
@@ -66,9 +67,10 @@ Options: `--root <dir>` (repeatable), `--timeout <seconds>` (default 120), `--ma
 
 - Paths are resolved through symlinks and must stay inside a root.
 - Each audit runs in a separate Node.js process started without a shell, with an empty environment,
-  a time limit, and an output limit. On Node.js 22.13+ that process runs under Node's permission
-  model: it can read only the audited directory and its own script, and cannot write files or start
-  processes.
+  a time limit, and an output limit. That process runs under Node's permission model: it can read
+  only the audited directory and its own script, and cannot write files or start processes. Node
+  lets a granted read follow a symlink, so the engines' own symlink checks still contain reads; the
+  sandbox is a second layer.
 - Stdout carries only MCP messages; diagnostics go to stderr.
 - Reports are kept in memory for the session (the 20 most recent) and never written to disk.
 - Text in results comes from the audited repository and should be treated as data.

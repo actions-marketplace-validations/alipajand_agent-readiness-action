@@ -39,8 +39,9 @@ MCP client ──stdio──▶ server.js (SDK 2.2.0, McpServer + StdioServerTra
 
 - The worker is the skill's bundle, so the MCP server, the skill, and both plugins run identical
   engine code (`tests/bundle.spec.ts` checks the files are equal).
-- On Node.js 22.13+ and 23.5+ the worker runs under Node's permission model with read access to the
-  audited directory and its own script only. `tests/parity.spec.ts` checks the sandbox does not
+- The worker runs under Node's permission model with read access to the audited directory and its
+  own script only. The model is stable from Node.js 22.13 and 23.5; the server refuses to start on
+  older releases rather than run workers unconfined (`tests/mcp.spec.ts`). `tests/parity.spec.ts` checks the sandbox does not
   change any result, including for a subdirectory of a larger repository.
 - Node 24.11 denies every read when one granted path is nested inside another (for example, the
   worker script inside the audited tree). `readGrants` drops covered paths, and

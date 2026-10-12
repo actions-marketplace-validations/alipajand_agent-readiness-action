@@ -3,13 +3,15 @@
 Checked on 2026-10-12. Status values: **PUBLISHED** (live), **READY** (all technical work done and
 verified; only owner steps remain), **NEEDS WORK** (technical work or a verification step is
 missing), **BLOCKED** (an external requirement prevents it), **SUBMITTED** (awaiting review).
-Nothing was submitted, published, or pushed during this work.
+Nothing was submitted or published during this work. Every **READY** row also waits on the release
+gate in [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) § 0: agent-context-doctor#74 merged and the
+submodule moved to its merge commit.
 
 ## Priority targets
 
 | Marketplace                                  | Submission URL                                             | Package                                                          | Status                          | Automated validation performed                                                                                                                                                                           | Remaining work                                                                                                                                                                        | Account / credentials                                                        | Maintenance                                    |
 | -------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------- |
-| GitHub Actions Marketplace                   | Existing listing (release `v1.1.0`, floating tag `v1`)     | `action.yml`, `dist/`                                            | **PUBLISHED**                   | `gh release list` shows `v1.1.0` (Latest, 2026-10-09); `action.yml`, `src/`, `dist/` unchanged by this work; 138 action tests pass; `dist/` rebuild identical                                            | None. The README gained an "Outside GitHub Actions" section, which updates the listing page on the next release                                                                       | Owner's GitHub account                                                       | Low: existing release process                  |
+| GitHub Actions Marketplace                   | Existing listing (release `v1.1.0`, floating tag `v1`)     | `action.yml`, `dist/`                                            | **PUBLISHED**                   | `gh release list` shows `v1.1.0` (Latest, 2026-10-09); `action.yml` and `src/` unchanged; `dist/` changes through the engine updates (see CHANGELOG); 138 action tests pass; `dist/` rebuild identical   | A new action release after merge, since `dist/` changes. The README gained an "Outside GitHub Actions" section, which updates the listing page on that release                        | Owner's GitHub account                                                       | Low: existing release process                  |
 | Cursor Marketplace                           | <https://cursor.com/marketplace/publish>                   | `plugins/agent-readiness/` via `.cursor-plugin/marketplace.json` | **NEEDS WORK**                  | Manifest rules, relative paths, no symlinks, logo, license (`plugins.spec.ts`)                                                                                                                           | Load the plugin in Cursor from `~/.cursor/plugins/local/` and run the command once (Cursor is not installed on the build machine); push the release commit                            | Cursor account; repository must stay public                                  | Medium: every version is reviewed by hand      |
 | skills.sh                                    | No submission; listed from install telemetry               | `agent-readiness-audit` skill                                    | **READY**                       | `skills-ref validate` (agentskills `69ef37e`): valid; `skills@1.7.2 add <repo> --list` discovers it; `skills add --skill agent-readiness-audit -a claude-code` installs it and the installed script runs | Push the release commit. Listing appears after people install it                                                                                                                      | None                                                                         | Low                                            |
 | Claude Code plugin (self-hosted marketplace) | `/plugin marketplace add alipajand/agent-readiness-action` | `plugins/agent-readiness/` via `.claude-plugin/marketplace.json` | **READY**                       | `claude plugin validate .` and `--strict plugins/agent-readiness` pass (Claude Code 2.1.278); installed from a git marketplace into an empty config; cached bundle byte-identical and runs               | Push the release commit                                                                                                                                                               | None for users; owner pushes                                                 | Low: bump `version` each release               |
@@ -31,13 +33,14 @@ Nothing was submitted, published, or pushed during this work.
 
 ## Owner-only actions, in order
 
-1. Review and merge the integrations branch; push it so the plugin marketplaces and skills.sh can
-   read it.
+1. Merge agent-context-doctor#74, move `vendor/agent-context-doctor` on this branch to the merge
+   commit, and let CI pass. Then review and merge this branch so the plugin marketplaces and
+   skills.sh can read it, and release the action (its `dist/` changes).
 2. Tag the integrations release `integrations-v0.1.0` (keep the action's `v1` tag where it is).
 3. Run the two manual client checks: `/agent-readiness:audit` in a logged-in Claude Code session,
    and the local Cursor plugin load.
-4. `npm publish` `integrations/mcp-package` (from CI with provenance, or locally after removing
-   `publishConfig.provenance`).
+4. `npm publish` `integrations/mcp-package` with 2FA. No npm provenance: nothing publishes from
+   CI (see `RELEASE-CHECKLIST.md` to add it).
 5. `mcp-publisher login github` and `mcp-publisher publish` from `integrations/mcp-package`.
 6. Submit the repository at <https://cursor.com/marketplace/publish>.
 7. Optional: Anthropic directory submission, Glama **Add Server**, mcpserver.dev form.
