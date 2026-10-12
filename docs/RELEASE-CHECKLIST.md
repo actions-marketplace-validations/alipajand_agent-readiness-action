@@ -1,6 +1,6 @@
 # Release checklist: integrations
 
-The GitHub Action keeps its own release steps (README, "Releasing"). This checklist covers the
+The GitHub Action keeps its own release steps (README, "Release checklist"). This checklist covers the
 skill, the Claude Code and Cursor plugin, and the MCP server. Integration releases use
 `integrations-v<version>` tags and never move the action's `v1` tag.
 
@@ -77,7 +77,7 @@ pnpm integrations:typecheck && pnpm integrations:build && pnpm integrations:test
 - [ ] `mcp-publisher login github` as `alipajand` (the `io.github.alipajand/*` namespace), then
       `mcp-publisher publish` from `integrations/mcp-package`. The registry checks that the
       published npm package's `mcpName` equals `server.json`'s `name`, so publish npm first
-- [ ] Release the action separately (README, "Releasing"): this branch changes `dist/` through the
+- [ ] Release the action separately (README, "Release checklist"): this branch changes `dist/` through the
       engine updates, so it needs a new action version, not only an integrations tag
 - [ ] Cursor Marketplace: submit or update at <https://cursor.com/marketplace/publish>
 - [ ] Update statuses and evidence in `docs/PUBLISHING-MATRIX.md`
