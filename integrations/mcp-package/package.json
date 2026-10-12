@@ -1,6 +1,6 @@
 {
   "name": "@alipajand/agent-readiness-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local MCP server that scores repository readiness for AI coding agents and checks agent instruction files. Deterministic, read-only, offline.",
   "mcpName": "io.github.alipajand/agent-readiness",
   "type": "module",

@@ -95,6 +95,19 @@ describe('plugin contents', () => {
     );
   });
 
+  it('stop instead of improvising when the audit script cannot run', () => {
+    // A denied or failed script call must not turn into scores or a manual review of the files.
+    const command = readFileSync(path.join(pluginDir, 'commands/audit.md'), 'utf8');
+    expect(command).toContain('tell me the audit did not run and why');
+    expect(command).toContain('do not inspect the files yourself instead');
+    const skill = readFileSync(
+      path.join(pluginDir, 'skills/agent-readiness-audit/SKILL.md'),
+      'utf8',
+    );
+    expect(skill).toContain('tell the user the audit did not run and why');
+    expect(skill).toContain('do not replace the audit with your own reading of the files');
+  });
+
   it('ship the license with the plugin', () => {
     expect(readFileSync(path.join(pluginDir, 'LICENSE'), 'utf8')).toBe(
       readFileSync(path.join(repoRoot, 'LICENSE'), 'utf8'),

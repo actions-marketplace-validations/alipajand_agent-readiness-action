@@ -3,9 +3,10 @@
 Checked on 2026-10-12, updated after the live client tests the same day. Status values: **PUBLISHED** (live), **READY** (all technical work done and
 verified; only owner steps remain), **NEEDS WORK** (technical work or a verification step is
 missing), **BLOCKED** (an external requirement prevents it), **SUBMITTED** (awaiting review), **NOT TESTED** (the client was not available to test).
-No integration was submitted or published; only the action release v1.2.0 was. Every integrations row also waits on the release
-gate in [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) § 0; the Claude Code and MCP host checks in § 3
-have passed, the Cursor and Windows checks have not been run.
+No integration was submitted or published; only the action release v1.2.0 was. The integrations rows wait on the release
+gate in [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) § 0. The Claude Code and MCP host checks in § 3
+have passed, so the skill, the Claude Code plugin, npm, and the MCP Registry are not blocked by
+Cursor. Only the Cursor Marketplace row waits on the Cursor check, which has not been run.
 
 ## Priority targets
 
@@ -34,13 +35,13 @@ have passed, the Cursor and Windows checks have not been run.
 ## Owner-only actions, in order
 
 1. Done: the action is released as v1.2.0 and `v1` points to it.
-2. Review and merge the integrations release branch (two permission fixes from the live run, and
-   these documents).
-3. Load the plugin in Cursor and run its command (`RELEASE-CHECKLIST.md` § 3). Until then, do not
-   submit it to the Cursor Marketplace.
-4. Tag the merge commit `integrations-v0.1.0`. The action's `v` tags are separate and do not move.
-5. `npm publish` `integrations/mcp-package` with 2FA. No npm provenance: nothing publishes from
+2. Review and merge the integrations release branch after its CI passes (two permission fixes from
+   the live run, version 0.1.1, and these documents).
+3. Tag the merge commit `integrations-v0.1.1`. The action's `v` tags are separate and do not move.
+4. `npm publish` `integrations/mcp-package` with 2FA. No npm provenance: nothing publishes from
    CI (see `RELEASE-CHECKLIST.md` to add it).
-6. `mcp-publisher login github` and `mcp-publisher publish` from `integrations/mcp-package`.
-7. Submit the repository at <https://cursor.com/marketplace/publish> once step 3 passes.
-8. Optional: Anthropic directory submission, Glama **Add Server**, mcpserver.dev form.
+5. `mcp-publisher login github` and `mcp-publisher publish` from `integrations/mcp-package`.
+6. Optional: Anthropic directory submission, Glama **Add Server**, mcpserver.dev form.
+7. Cursor, independent of steps 3 to 6: load the plugin in Cursor and run its command
+   (`RELEASE-CHECKLIST.md` § 3). Only if it passes, submit the repository at
+   <https://cursor.com/marketplace/publish>.

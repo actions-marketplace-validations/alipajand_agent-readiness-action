@@ -6,7 +6,7 @@ compatibility: Requires Node.js 22.12 or later. Works offline. No API key, packa
 allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/agent-readiness.mjs *)
 metadata:
   author: alipajand
-  version: '0.1.0'
+  version: '0.1.1'
   repository: https://github.com/alipajand/agent-readiness-action
 ---
 
@@ -77,3 +77,7 @@ See [references/REPORT-FORMAT.md](references/REPORT-FORMAT.md) for every field.
   full value.
 - Do not substitute `npx agent-readiness-kit` or `npx agent-context-doctor`: those npm package
   names belong to unrelated projects.
+- If the script cannot run (the command is denied, Node.js is missing, or it exits with an error
+  before reporting), tell the user the audit did not run and why, and stop. Do not report scores or
+  findings, and do not replace the audit with your own reading of the files. Offer that only as a
+  separate, clearly labelled review if the user asks for it.

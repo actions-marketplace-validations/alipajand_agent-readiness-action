@@ -39,9 +39,15 @@ Inside a session the same steps are `/plugin marketplace add alipajand/agent-rea
 
 ### Use
 
-- `/agent-readiness:audit [path]`: run the audit on a path (default: the current directory).
-- `/agent-readiness:agent-readiness-audit`, or ask in plain words: the skill loads by itself when
-  the request matches its description.
+- `/agent-readiness:audit [path]`: run the audit on a path (default: the current directory). This
+  is the tested path: it runs the bundled script once without a permission prompt.
+- `/agent-readiness:agent-readiness-audit`: the skill, invoked by name. Also tested.
+- Asking in plain words relies on Claude loading the skill by itself, which is not verified as
+  reliable: in a headless session the `Skill` tool call was denied and the model read the files
+  itself. An answer without the engines' scores and commits means the audit did not run.
+
+The scanner is offline; Claude is not. Claude reads the report and may send it, and any files it
+reads itself, to its model provider ([SECURITY-MODEL.md](SECURITY-MODEL.md#offline-scanner-ai-client)).
 
 ### Local development
 
@@ -58,6 +64,10 @@ claude plugin validate .
 ```
 
 ## Cursor
+
+**Not tested in Cursor yet.** The manifests follow Cursor's plugin reference and are checked by
+`plugins.spec.ts`, but the plugin has not been loaded in Cursor, so it is not submitted to the
+Cursor Marketplace.
 
 ### Install
 
@@ -136,6 +146,6 @@ Owner actions are marked ☐ and happen outside this repository.
       signed-in session to confirm variable substitution (2026-10-12, headless)
 - [x] Install from the GitHub marketplace into an empty `CLAUDE_CONFIG_DIR` (2026-10-12)
 - [x] The release commit is on `main`: `claude plugin marketplace add alipajand/agent-readiness-action` works
-- ☐ Merge the integrations release branch and tag `integrations-v0.1.0`
+- ☐ Merge the integrations release branch and tag `integrations-v0.1.1`
 - ☐ Optional: submit to Anthropic's directory at <https://claude.ai/directory/manage> (requires a
   paid claude.ai plan; the portal applies extra rules the CLI does not check)

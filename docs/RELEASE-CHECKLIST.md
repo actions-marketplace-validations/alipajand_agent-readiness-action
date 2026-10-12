@@ -15,7 +15,9 @@ skill, the Claude Code and Cursor plugin, and the MCP server. Integration releas
       previous engine
 - [x] CI passes on the final commit of the pull request (Linux, Node.js 22.13.0 and 24): all six
       checks passed on `0b4cc20`, including CodeQL
-- [ ] The live-client checks in § 3 pass (Claude Code and the MCP host pass; Cursor not tested)
+- [x] The Claude Code checks in § 3 pass (plugin, skill, marketplace install, MCP host). This gates
+      the skill, the Claude Code plugin, npm, and the MCP Registry
+- [ ] The Cursor check in § 3 passes. This gates the Cursor Marketplace submission only
 
 ## 1. Versions
 
@@ -99,7 +101,8 @@ or the skill by name ran the script directly.
       published npm package's `mcpName` equals `server.json`'s `name`, so publish npm first
 - [ ] Release the action separately (README, "Release checklist"): this branch changes `dist/` through the
       engine updates, so it needs a new action version, not only an integrations tag
-- [ ] Cursor Marketplace: submit or update at <https://cursor.com/marketplace/publish>
+- [ ] Cursor Marketplace: submit or update at <https://cursor.com/marketplace/publish>, only after
+      the Cursor check in § 3 passes
 - [ ] Update statuses and evidence in `docs/PUBLISHING-MATRIX.md`
 
 ## Engine bumps

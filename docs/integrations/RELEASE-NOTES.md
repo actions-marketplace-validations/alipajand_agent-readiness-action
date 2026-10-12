@@ -3,16 +3,21 @@
 The skill, the Claude Code and Cursor plugin, and the MCP server are released together under
 `integrations-v<version>` tags. Those tags are independent of the GitHub Action's `v` tags.
 
-## 0.1.0 (unreleased)
+## 0.1.1 (unreleased)
 
 First release. It packages the same pinned engines as agent-readiness-action v1.2.0 for local
-use by AI coding agents: read-only, offline, and with no LLM scoring.
+use by AI coding agents: read-only, offline scanning with no LLM scoring.
 
-| Component                                       | Version | Where                                                                                                                          |
-| ----------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Agent Skill `agent-readiness-audit`             | 0.1.0   | `plugins/agent-readiness/skills/agent-readiness-audit/`; `npx skills add alipajand/agent-readiness-action`                     |
-| Claude Code and Cursor plugin `agent-readiness` | 0.1.0   | `claude plugin marketplace add alipajand/agent-readiness-action`, then `claude plugin install agent-readiness@agent-readiness` |
-| MCP server `@alipajand/agent-readiness-mcp`     | 0.1.0   | npm (not yet published); MCP Registry name `io.github.alipajand/agent-readiness`                                               |
+Version 0.1.0 was never tagged or published, but the plugin was installable from `main` at 0.1.0
+before the fixes below. Claude Code updates an installed plugin only when its version changes, so
+the first release is 0.1.1.
+
+| Component                                        | Version | Where                                                                                                                          | Status                                                     |
+| ------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| Agent Skill `agent-readiness-audit`              | 0.1.1   | `plugins/agent-readiness/skills/agent-readiness-audit/`; `npx skills add alipajand/agent-readiness-action`                     | Tested in Claude Code                                      |
+| Claude Code plugin `agent-readiness`             | 0.1.1   | `claude plugin marketplace add alipajand/agent-readiness-action`, then `claude plugin install agent-readiness@agent-readiness` | Tested in Claude Code                                      |
+| MCP server `@alipajand/agent-readiness-mcp`      | 0.1.1   | npm (not yet published); MCP Registry name `io.github.alipajand/agent-readiness`                                               | Tested with Claude Code as host                            |
+| Cursor plugin (same `agent-readiness` directory) | 0.1.1   | Local install only (`~/.cursor/plugins/local/`)                                                                                | **Not tested in Cursor; not submitted to the Marketplace** |
 
 Engines: agent-readiness-kit `f15924b` and agent-context-doctor `034a74c`. Every report and bundle
 header names both commits.
@@ -30,26 +35,42 @@ header names both commits.
   and findings.
 - The MCP server offers `audit_repository`, `audit_agent_context`, and `get_audit_report` (paged,
   with the engines' raw JSON on request), restricted to the directories given with `--root`.
-- Nothing is written to the audited repository, no network request is made, and the repository's
-  own scripts are never run. Recognised credentials are masked in findings; see
+- The scanner writes nothing to the audited repository, makes no network request, and never runs
+  the repository's own scripts. Recognised credentials are masked in its output; see
   `docs/SECURITY-FINDINGS.md` for what masking does and does not guarantee.
+
+### The scanner is offline; the AI client is not
+
+The skill script and the MCP server are deterministic and make no network requests. The AI client
+that runs them reads the results and may send them to its model provider. It may also read the
+repository's files directly and send those. Credential masking covers the scanner's output only.
+See `docs/integrations/SECURITY-MODEL.md`.
+
+### How to invoke it
+
+The tested path in Claude Code is invoking the audit by name: `/agent-readiness:audit [path]`,
+`/agent-readiness:agent-readiness-audit`, or `/agent-readiness-audit` for the standalone skill.
+Asking in plain words relies on the client loading the skill by itself, which is not verified as
+reliable: in a headless session Claude Code denied that `Skill` call and the model read the files
+itself. If the script cannot run, the command and the skill now tell the model to say the audit did
+not run instead of giving scores or reviewing the files itself. An answer without the engines'
+scores and commits means the audit did not run.
 
 ### Fixed before release
 
 Found in live Claude Code sessions and fixed with regression tests:
 
 - `/agent-readiness:audit` made the model call the `Skill` tool, which the command does not
-  pre-approve, so Claude Code denied or prompted for it. The command now needs only the bundled
-  script.
+  pre-approve, so Claude Code denied it. The command now needs only the bundled script.
 - The skill showed its script as `<skill-dir>/scripts/…`, so the model built the path itself and the
   call no longer matched the pre-approved command. In Claude Code the skill now gives the exact
   command with `${CLAUDE_SKILL_DIR}`.
 
 ### Tested
 
-- Claude Code 2.1.278, signed in: the plugin command, the plugin's skill, the skill installed from
-  GitHub with `npx skills add`, installation from the GitHub marketplace, and the packed MCP server
-  as a host's MCP server.
+- Claude Code 2.1.278, signed in, headless: the plugin command, the plugin's skill, the skill
+  installed from GitHub with `npx skills add`, installation from the GitHub marketplace, and the
+  packed MCP server as the session's MCP server.
 - The skill's JSON equals `ark audit --json --no-history` and `acd audit --json` on 28 repositories
   and fixtures.
 - Linux CI on Node.js 22.13.0 and 24; macOS locally on Node.js 22.13.0 and 24.
@@ -57,5 +78,6 @@ Found in live Claude Code sessions and fixed with regression tests:
 ### Not tested
 
 - Cursor (not installed on the build machine).
+- Claude Code in an interactive session, and plain-language invocation of the skill.
 - Windows.
 - Codex and other skill clients.
