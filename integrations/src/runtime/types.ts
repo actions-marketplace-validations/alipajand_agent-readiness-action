@@ -47,8 +47,8 @@ export interface ContextResult {
   /** True when the audited repository's `.acdrc` supplied rules. */
   configApplied: boolean;
   /**
-   * Issue fields (`evidence`, `message`) in which a credential was redacted.
-   * Zero means the report is exactly the engine's output.
+   * Issue ids in which a credential was redacted. The engine masks the other
+   * fields itself. Zero means the report is exactly the engine's output.
    */
   redactions: number;
   /** The engine's own JSON report (`acd audit --json`), with credentials redacted. */

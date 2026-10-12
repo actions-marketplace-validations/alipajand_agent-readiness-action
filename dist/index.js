@@ -40044,16 +40044,178 @@ function toDisplayText(text) {
     return out;
 }
 
+;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/checks/secrets.ts
+
+// Generic assignments only count when the value looks like a credential:
+// letters and digits, not a function call, variable, or env lookup.
+function looksLikeCredential(value) {
+    return /[A-Za-z]/.test(value) && /\d/.test(value) && !/[()[\]]/.test(value);
+}
+// Well-known credential formats. All are anchored on distinctive prefixes so
+// ordinary prose does not match.
+const SECRET_PATTERNS = [
+    { label: 'AWS access key ID', pattern: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g, severity: 'high' },
+    { label: 'GitHub token', pattern: /\bgh[pousr]_[A-Za-z0-9]{36,}\b/g, severity: 'high' },
+    { label: 'GitHub token', pattern: /\bgithub_pat_[A-Za-z0-9_]{22,}\b/g, severity: 'high' },
+    { label: 'Anthropic API key', pattern: /\bsk-ant-[A-Za-z0-9_-]{20,}/g, severity: 'high' },
+    {
+        label: 'OpenAI API key',
+        pattern: /\bsk-(?!ant-)(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{32,}/g,
+        severity: 'high',
+    },
+    {
+        label: 'Stripe secret key',
+        pattern: /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b/g,
+        severity: 'high',
+    },
+    { label: 'Slack token', pattern: /\bxox[abposr]-[A-Za-z0-9-]{10,}/g, severity: 'high' },
+    { label: 'Google API key', pattern: /\bAIza[0-9A-Za-z_-]{35}\b/g, severity: 'high' },
+    { label: 'npm access token', pattern: /\bnpm_[A-Za-z0-9]{36}\b/g, severity: 'high' },
+    {
+        label: 'private key',
+        pattern: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----/g,
+        severity: 'high',
+    },
+    {
+        label: 'credential assignment',
+        pattern: /\b(?:password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\b\s*[:=]\s*["']?([^\s"'`,;]{8,})/gi,
+        severity: 'medium',
+        group: 1,
+        looksReal: looksLikeCredential,
+    },
+];
+// Values that are clearly documentation rather than real credentials.
+const PLACEHOLDER = /example|sample|dummy|fake|placeholder|changeme|your[_-]|redacted|xxxx|\*{3}|<[^<>]*>|\$\{|\$[A-Z_]|process\.env|environ|getenv|secrets\.|\{\{/i;
+/** Mask a credential, keeping a short prefix so the finding can be located. */
+function maskSecret(value) {
+    const visible = value.startsWith('-----') ? value.length : Math.min(4, value.length);
+    return value.slice(0, visible) + '*'.repeat(Math.max(0, Math.min(value.length - visible, 12)));
+}
+// Masking replaces every occurrence of each value across the whole line, one
+// pass per distinct value. A line with thousands of distinct credentials would
+// make that grow with the square of its length, so past this many the line is
+// masked word by word instead.
+const MAX_VALUES_PER_LINE = 64;
+// Every value that maskSecret hides part of is at least eight characters long
+// and contains no whitespace, so it lies inside a run of eight or more
+// non-space characters. Keeping only the first four characters of each such
+// run hides at least what masking the values one by one would.
+function maskEveryWord(line) {
+    return line.replace(/\S{8,}/g, (word) => word.slice(0, 4) + '*'.repeat(Math.min(word.length - 4, 12)));
+}
+function scanLine(line) {
+    // Insertion order is discovery order, which the masking below relies on.
+    const values = new Set();
+    const labels = [];
+    let severity = null;
+    for (const { label, pattern, severity: patternSeverity, group = 0, looksReal, } of SECRET_PATTERNS) {
+        for (const match of line.matchAll(pattern)) {
+            const value = match[group];
+            if (!value || PLACEHOLDER.test(value))
+                continue;
+            if (looksReal && !looksReal(value))
+                continue;
+            values.add(value);
+            if (!labels.includes(label))
+                labels.push(label);
+            if (severity !== 'high')
+                severity = patternSeverity;
+        }
+    }
+    if (values.size > MAX_VALUES_PER_LINE) {
+        return { redacted: maskEveryWord(line), labels, severity };
+    }
+    let redacted = line;
+    for (const value of values)
+        redacted = redacted.split(value).join(maskSecret(value));
+    return { redacted, labels, severity };
+}
+/**
+ * Mask every credential the secrets check would report. Any text quoted from
+ * an audited file goes through this before it reaches a finding, so a token
+ * on a line flagged for another reason is not printed in plaintext.
+ */
+function redactSecrets(text) {
+    return text
+        .split('\n')
+        .map((line) => scanLine(line).redacted)
+        .join('\n');
+}
+function checkSecrets(filePath, content) {
+    const issues = [];
+    content.split('\n').forEach((line, idx) => {
+        const { redacted: redactedLine, labels, severity } = scanLine(line);
+        if (severity === null)
+            return;
+        issues.push({
+            id: `secrets-${filePath}-${idx + 1}`,
+            severity,
+            category: 'secrets',
+            file: filePath,
+            line: idx + 1,
+            // Evidence is built from the redacted line so reports never repeat the secret.
+            evidence: toDisplayText(redactedLine.replace(/\s+/g, ' ').trim()).slice(0, 160),
+            message: `Possible ${labels.join(', ')} in an agent instruction file`,
+            recommendation: 'Remove the credential, rotate it, and reference it through an environment variable or secret manager instead. Instruction files are read by agents and often shared.',
+        });
+    });
+    return issues;
+}
+
 ;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/evidence.ts
 
+
 const MAX_EVIDENCE_LENGTH = 160;
-function getLineEvidence(content, line) {
-    const lines = content.split('\n');
-    const raw = lines[line - 1] ?? '';
-    return toDisplayText(raw.replace(/\s+/g, ' ').trim()).slice(0, MAX_EVIDENCE_LENGTH);
+// Checks ask for evidence one finding at a time, often many times for the
+// same file and line. Splitting the file once and masking each line once keeps
+// the total work linear in the file's size.
+let cachedContent;
+let cachedLines = [];
+const cachedEvidence = new Map();
+function linesOf(content) {
+    if (content !== cachedContent) {
+        cachedContent = content;
+        cachedLines = content.split('\n');
+        cachedEvidence.clear();
+    }
+    return cachedLines;
+}
+function format(raw) {
+    return toDisplayText(redactSecrets(raw).replace(/\s+/g, ' ').trim()).slice(0, MAX_EVIDENCE_LENGTH);
+}
+/**
+ * One line of an audited file, ready to show as evidence. Credentials are
+ * masked before the line is shortened, so truncation cannot cut a token down
+ * to a prefix the patterns no longer recognize. `secrets` lists extra values
+ * to mask that the patterns would not find, such as a configured env value.
+ */
+function getLineEvidence(content, line, secrets = []) {
+    const lines = linesOf(content);
+    if (secrets.length === 0) {
+        let evidence = cachedEvidence.get(line);
+        if (evidence === undefined) {
+            evidence = format(lines[line - 1] ?? '');
+            cachedEvidence.set(line, evidence);
+        }
+        return evidence;
+    }
+    // Caller values first: a pattern that masks part of one would leave the
+    // rest unmatched by the split below.
+    let raw = lines[line - 1] ?? '';
+    // Each value is one pass over the line. Past the limit, everything after
+    // the first four characters is hidden, which hides at least as much.
+    if (secrets.length > MAX_VALUES_PER_LINE) {
+        return format(raw.slice(0, 4) + '*'.repeat(Math.max(0, Math.min(raw.length - 4, 12))));
+    }
+    for (const secret of secrets) {
+        if (secret)
+            raw = raw.split(secret).join(maskSecret(secret));
+    }
+    return format(raw);
 }
 
 ;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/checks/placeholderContent.ts
+
 
 
 const TEMPLATE_MARKERS = [
@@ -40086,7 +40248,7 @@ function checkPlaceholderContent(filePath, content) {
                     file: filePath,
                     line: idx + 1,
                     evidence: getLineEvidence(content, idx + 1),
-                    message: `Placeholder content detected: "${toDisplayText(line.trim()).slice(0, 80)}"`,
+                    message: `Placeholder content detected: "${toDisplayText(redactSecrets(line).trim()).slice(0, 80)}"`,
                     recommendation: 'Replace placeholder content with real, project-specific instructions.',
                 });
             }
@@ -40968,6 +41130,7 @@ function checkMakeTargets(filePath, content, targets) {
 
 
 
+
 const CONTRADICTION_GROUPS = [
     {
         name: 'tests',
@@ -41046,7 +41209,7 @@ const MAX_PHRASE_LENGTH = 160;
 // so they are shown the way line evidence is: one line, visible characters,
 // bounded length.
 function toPhrase(text) {
-    return toDisplayText(text.replace(/\s+/g, ' ').trim()).slice(0, MAX_PHRASE_LENGTH);
+    return toDisplayText(redactSecrets(text).replace(/\s+/g, ' ').trim()).slice(0, MAX_PHRASE_LENGTH);
 }
 function findMatches(files, patterns, ignoreNegated = false) {
     const matches = [];
@@ -41225,6 +41388,7 @@ function checkSkippedFile(file) {
 ;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/checks/hiddenCharacters.ts
 
 
+
 const BOM = 0xfeff;
 const ZWNJ = 0x200c;
 const ZWJ = 0x200d;
@@ -41254,7 +41418,7 @@ function decodeTagText(chars) {
         .map((cp) => String.fromCharCode(cp - 0xe0000))
         .join('');
 }
-function scanLine(line, isFirstLine) {
+function hiddenCharacters_scanLine(line, isFirstLine) {
     const chars = Array.from(line);
     let severity = null;
     const codePoints = new Set();
@@ -41287,12 +41451,12 @@ function scanLine(line, isFirstLine) {
 function checkHiddenCharacters(filePath, content) {
     const issues = [];
     content.split('\n').forEach((line, idx) => {
-        const finding = scanLine(line, idx === 0);
+        const finding = hiddenCharacters_scanLine(line, idx === 0);
         if (!finding)
             return;
         const list = [...finding.codePoints].join(', ');
         const hidden = finding.hiddenText
-            ? ` Hidden text: "${finding.hiddenText.replace(/\s+/g, ' ').trim().slice(0, 120)}"`
+            ? ` Hidden text: "${toDisplayText(redactSecrets(finding.hiddenText).replace(/\s+/g, ' ').trim()).slice(0, 120)}"`
             : '';
         issues.push({
             id: `hidden-characters-${filePath}-${idx + 1}`,
@@ -41308,90 +41472,8 @@ function checkHiddenCharacters(filePath, content) {
     return issues;
 }
 
-;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/checks/secrets.ts
-
-// Generic assignments only count when the value looks like a credential:
-// letters and digits, not a function call, variable, or env lookup.
-function looksLikeCredential(value) {
-    return /[A-Za-z]/.test(value) && /\d/.test(value) && !/[()[\]]/.test(value);
-}
-// Well-known credential formats. All are anchored on distinctive prefixes so
-// ordinary prose does not match.
-const SECRET_PATTERNS = [
-    { label: 'AWS access key ID', pattern: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g, severity: 'high' },
-    { label: 'GitHub token', pattern: /\bgh[pousr]_[A-Za-z0-9]{36,}\b/g, severity: 'high' },
-    { label: 'GitHub token', pattern: /\bgithub_pat_[A-Za-z0-9_]{22,}\b/g, severity: 'high' },
-    { label: 'Anthropic API key', pattern: /\bsk-ant-[A-Za-z0-9_-]{20,}/g, severity: 'high' },
-    {
-        label: 'OpenAI API key',
-        pattern: /\bsk-(?!ant-)(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{32,}/g,
-        severity: 'high',
-    },
-    {
-        label: 'Stripe secret key',
-        pattern: /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b/g,
-        severity: 'high',
-    },
-    { label: 'Slack token', pattern: /\bxox[abposr]-[A-Za-z0-9-]{10,}/g, severity: 'high' },
-    { label: 'Google API key', pattern: /\bAIza[0-9A-Za-z_-]{35}\b/g, severity: 'high' },
-    { label: 'npm access token', pattern: /\bnpm_[A-Za-z0-9]{36}\b/g, severity: 'high' },
-    {
-        label: 'private key',
-        pattern: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----/g,
-        severity: 'high',
-    },
-    {
-        label: 'credential assignment',
-        pattern: /\b(?:password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\b\s*[:=]\s*["']?([^\s"'`,;]{8,})/gi,
-        severity: 'medium',
-        group: 1,
-        looksReal: looksLikeCredential,
-    },
-];
-// Values that are clearly documentation rather than real credentials.
-const PLACEHOLDER = /example|sample|dummy|fake|placeholder|changeme|your[_-]|redacted|xxxx|\*{3}|<[^>]*>|\$\{|\$[A-Z_]|process\.env|environ|getenv|secrets\.|\{\{/i;
-function redact(value) {
-    const visible = value.startsWith('-----') ? value.length : Math.min(4, value.length);
-    return value.slice(0, visible) + '*'.repeat(Math.max(0, Math.min(value.length - visible, 12)));
-}
-function checkSecrets(filePath, content) {
-    const issues = [];
-    content.split('\n').forEach((line, idx) => {
-        let redactedLine = line;
-        const labels = [];
-        let severity = null;
-        for (const { label, pattern, severity: patternSeverity, group = 0, looksReal, } of SECRET_PATTERNS) {
-            for (const match of line.matchAll(pattern)) {
-                const value = match[group];
-                if (!value || PLACEHOLDER.test(value))
-                    continue;
-                if (looksReal && !looksReal(value))
-                    continue;
-                redactedLine = redactedLine.split(value).join(redact(value));
-                if (!labels.includes(label))
-                    labels.push(label);
-                if (severity !== 'high')
-                    severity = patternSeverity;
-            }
-        }
-        if (severity === null)
-            return;
-        issues.push({
-            id: `secrets-${filePath}-${idx + 1}`,
-            severity,
-            category: 'secrets',
-            file: filePath,
-            line: idx + 1,
-            // Evidence is built from the redacted line so reports never repeat the secret.
-            evidence: toDisplayText(redactedLine.replace(/\s+/g, ' ').trim()).slice(0, 160),
-            message: `Possible ${labels.join(', ')} in an agent instruction file`,
-            recommendation: 'Remove the credential, rotate it, and reference it through an environment variable or secret manager instead. Instruction files are read by agents and often shared.',
-        });
-    });
-    return issues;
-}
-
 ;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/baseline.ts
+
 
 
 /**
@@ -41427,7 +41509,7 @@ async function loadBaseline(filePath) {
         parsed = JSON.parse(raw);
     }
     catch (err) {
-        throw new BaselineError(`Baseline ${filePath} is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+        throw new BaselineError(`Baseline ${filePath} ${describeJsonError(raw, err)}`);
     }
     const issues = parsed?.issues;
     if (!Array.isArray(issues)) {
@@ -42099,6 +42181,7 @@ function findShellRisks(command) {
 
 ;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/audit/checks/claudeSettings.ts
 
+
 function asRecord(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value)
         ? value
@@ -42330,7 +42413,7 @@ const CREDENTIAL_HELPERS = [
 ];
 /** Shorten repository-provided text quoted in a message. */
 function clip(text, max = 80) {
-    const flat = text.replace(/\s+/g, ' ').trim();
+    const flat = redactSecrets(text).replace(/\s+/g, ' ').trim();
     return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
 }
 /** Every command that Claude Code runs on its own because of these settings. */
@@ -42602,10 +42685,9 @@ function mcpServerFindings(name, server) {
 }
 // The quoted JSON form finds the value itself: a bare "~" would also match
 // "Edit(~/.zshrc)" on an earlier line.
-function lineOf(content, needle) {
+function lineOf(lines, needle) {
     if (!needle)
         return undefined;
-    const lines = content.split('\n');
     for (const form of [JSON.stringify(needle), needle]) {
         const idx = lines.findIndex((line) => line.includes(form));
         if (idx !== -1)
@@ -42648,8 +42730,35 @@ function checkAgentConfig(filePath, content) {
         if (server)
             findings.push(...mcpServerFindings(name, server));
     }
+    const lines = content.split('\n');
+    // Every finding quoting a line masks the whole of each credential configured
+    // on it, not only the part a pattern recognized: in a compact file the
+    // unpinned-npx finding quotes the same line as the server's env values.
+    const credentialMasks = new Map();
+    for (const finding of findings) {
+        const line = finding.secret === true ? lineOf(lines, finding.needle) : undefined;
+        if (line === undefined)
+            continue;
+        credentialMasks.set(line, [
+            ...(credentialMasks.get(line) ?? []),
+            ...credentialForms(finding.needle),
+        ]);
+    }
+    // Built once per line: many findings can quote the same long line.
+    const evidenceByLine = new Map();
+    const evidenceAt = (line) => {
+        let evidence = evidenceByLine.get(line);
+        if (evidence === undefined) {
+            evidence = getLineEvidence(content, line, credentialMasks.get(line));
+            evidenceByLine.set(line, evidence);
+        }
+        return evidence;
+    };
     const secretIssues = checkSecrets(filePath, content).map((issue) => ({
         ...issue,
+        ...(issue.line !== undefined && credentialMasks.has(issue.line)
+            ? { evidence: evidenceAt(issue.line) }
+            : {}),
         id: issue.id.replace(/^secrets-/, 'agent-config-secret-'),
         category: 'agent-config',
         message: `${issue.message.replace(' in an agent instruction file', '')} in agent configuration`,
@@ -42658,31 +42767,24 @@ function checkAgentConfig(filePath, content) {
     const secretLines = new Set(secretIssues.map((i) => i.line));
     const issues = [];
     findings.forEach((finding, i) => {
-        const line = lineOf(content, finding.needle);
-        const isCredential = finding.secret === true;
-        if (isCredential && line !== undefined && secretLines.has(line))
+        const line = lineOf(lines, finding.needle);
+        if (finding.secret === true && line !== undefined && secretLines.has(line))
             return;
         issues.push({
             id: `agent-config-${filePath}-${i}`,
             severity: finding.severity,
             category: 'agent-config',
             file: filePath,
-            ...(line
-                ? { line, evidence: evidenceFor(content, line, isCredential ? finding.needle : undefined) }
-                : {}),
+            ...(line ? { line, evidence: evidenceAt(line) } : {}),
             message: finding.message,
             recommendation: finding.recommendation,
         });
     });
     return [...issues, ...secretIssues];
 }
-// Evidence for a credential finding must not repeat the value.
-function evidenceFor(content, line, secret) {
-    const evidence = getLineEvidence(content, line);
-    if (!secret)
-        return evidence;
-    const masked = `${secret.slice(0, 4)}${'*'.repeat(Math.min(12, Math.max(0, secret.length - 4)))}`;
-    return evidence.split(secret).join(masked);
+// The value may appear JSON-escaped on the line, so both spellings are masked.
+function credentialForms(value) {
+    return value ? [value, JSON.stringify(value).slice(1, -1)] : [];
 }
 /** Repository scripts that `.claude/settings.json` runs from hooks or the status line. */
 function claudeSettingsScripts(content) {
@@ -43583,6 +43685,11 @@ async function auditRepo_auditRepo(repoPath, opts = {}) {
     const medium = issues.filter((i) => i.severity === 'medium').length;
     const low = issues.filter((i) => i.severity === 'low').length;
     for (const issue of issues) {
+        // Checks mask what they quote; this catches any text quoted some other way.
+        issue.message = redactSecrets(issue.message);
+        issue.recommendation = redactSecrets(issue.recommendation);
+        if (issue.evidence !== undefined)
+            issue.evidence = redactSecrets(issue.evidence);
         issue.fingerprint = fingerprintIssue(issue);
     }
     return {
@@ -43598,6 +43705,20 @@ async function auditRepo_auditRepo(repoPath, opts = {}) {
         score: computeScore(issues),
         issues,
     };
+}
+
+;// CONCATENATED MODULE: ./vendor/agent-context-doctor/src/text/jsonError.ts
+/**
+ * Describe a JSON.parse failure by position only. The parser's own message
+ * quotes the start of the input, which for a file reached through a hostile
+ * repository could be another file's content.
+ */
+function jsonError_describeJsonError(raw, err) {
+    const position = /position (\d+)/.exec(err instanceof Error ? err.message : '');
+    if (!position)
+        return 'is not valid JSON';
+    const before = raw.slice(0, Number(position[1])).split('\n');
+    return `is not valid JSON (line ${before.length}, column ${before[before.length - 1].length + 1})`;
 }
 
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/util.js
@@ -53139,10 +53260,32 @@ const AcdRcSchema = object({
 
 
 
+
+
+
+function isMissing(err) {
+    const code = err?.code;
+    return code === 'ENOENT' || code === 'ENOTDIR';
+}
 async function loadConfig(searchDir) {
     const configPath = external_node_path_default().join(searchDir, '.acdrc');
-    const read = await readTextFile_readRegularFile(configPath, readTextFile_MAX_TEXT_FILE_BYTES);
-    // No .acdrc present — not an error
+    // `.acdrc` comes from the audited repository, so a symlink must not let it
+    // read a file elsewhere on disk, the same as context files.
+    let realConfig;
+    try {
+        realConfig = await promises_default().realpath(configPath);
+    }
+    catch (err) {
+        // No .acdrc present (or a dangling link) — not an error
+        if (isMissing(err))
+            return null;
+        throw err;
+    }
+    const realDir = await promises_default().realpath(searchDir).catch(() => external_node_path_default().resolve(searchDir));
+    if (!fs_safePath_isWithin(realDir, realConfig)) {
+        throw new Error(`.acdrc at ${configPath} links outside ${searchDir}; refusing to read it`);
+    }
+    const read = await readTextFile_readRegularFile(realConfig, readTextFile_MAX_TEXT_FILE_BYTES);
     if (read.status === 'missing')
         return null;
     if (read.status === 'error')
@@ -53159,7 +53302,7 @@ async function loadConfig(searchDir) {
         parsed = JSON.parse(raw);
     }
     catch (err) {
-        throw new Error(`.acdrc at ${configPath} is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+        throw new Error(`.acdrc at ${configPath} ${jsonError_describeJsonError(raw, err)}`);
     }
     const result = AcdRcSchema.safeParse(parsed);
     if (!result.success) {

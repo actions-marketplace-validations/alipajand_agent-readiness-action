@@ -60,7 +60,8 @@ describe('hostile repositories', () => {
     expect(run.stdout).not.toContain(token);
     expect(runSkill(['audit', repo, '--max-items', '1000']).stdout).not.toContain(token);
     if (report?.context.status !== 'ok') throw new Error('context failed');
-    expect(report.context.result.redactions).toBeGreaterThan(0);
+    // The engine masks evidence itself; the runtime only masks ids, and no id here holds the token.
+    expect(report.context.result.redactions).toBe(0);
     const nonSecret = report.context.result.report.issues.filter(
       (i) => i.category !== 'secrets' && i.evidence?.includes('ghp_'),
     );
@@ -88,7 +89,16 @@ describe('hostile repositories', () => {
       path.join(repo, 'package.json'),
       JSON.stringify({ name: 'x', scripts: { test: `GITHUB_TOKEN=${token} vitest` } }),
     );
+    // Matches no pattern: masked because it is configured as a credential.
+    const configured = 'cfgval' + '7Q2w9E4rXY';
+    await writeFile(
+      path.join(repo, '.mcp.json'),
+      JSON.stringify({
+        mcpServers: { s: { command: 'npx', args: ['pkg'], env: { API_TOKEN: configured } } },
+      }),
+    );
     const { run, report } = audit(repo);
+    expect(run.stdout).not.toContain(configured);
     expect(run.status).toBe(0);
     if (report?.context.status !== 'ok') throw new Error('context failed');
     const hits: string[] = [];
@@ -105,6 +115,7 @@ describe('hostile repositories', () => {
     for (const hit of hits) expect(hit).toMatch(/\.(file|path|files\.\d+)$/);
     const ids = report.context.result.report.issues.map((i) => i.id);
     expect(ids.some((id) => id.includes('ghp_****'))).toBe(true);
+    expect(report.context.result.redactions).toBeGreaterThan(0);
   });
 
   it('escapes Markdown and shows hidden characters in the Markdown report', async () => {

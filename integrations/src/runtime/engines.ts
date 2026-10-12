@@ -2,7 +2,7 @@ import { auditRepo as auditReadiness } from '../../../vendor/agent-readiness-kit
 import { toAuditJson } from '../../../vendor/agent-readiness-kit/src/report/jsonReport.js';
 import { auditRepo as auditContext } from '../../../vendor/agent-context-doctor/src/audit/auditRepo.js';
 import { loadConfig } from '../../../vendor/agent-context-doctor/src/config/loadConfig.js';
-import { checkSecrets } from '../../../vendor/agent-context-doctor/src/audit/checks/secrets.js';
+import { redactSecrets } from '../../../vendor/agent-context-doctor/src/audit/checks/secrets.js';
 import { lstat, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { AuditRuntimeError } from './errors.js';
@@ -19,10 +19,10 @@ export async function runReadiness(dir: string): Promise<ReadinessAuditJson> {
 }
 
 /**
- * The doctor reads `.acdrc` without checking where a symlink points, and its
- * parse errors quote the start of the file. A hostile repository could link
- * `.acdrc` to a file elsewhere on disk and have a fragment of it reported, or
- * have it applied as configuration. Refuse that before the engine reads it.
+ * A hostile repository could link `.acdrc` to a file elsewhere on disk. The
+ * doctor refuses such a link itself; this check refuses it before the engine
+ * opens anything, so the guarantee does not rest on one layer, and its error
+ * names no absolute path. It costs one `lstat`.
  */
 async function assertConfigInside(dir: string): Promise<void> {
   const file = path.join(dir, '.acdrc');
@@ -40,39 +40,24 @@ async function assertConfigInside(dir: string): Promise<void> {
   }
 }
 
-/** `text` with any credential the doctor recognises redacted, or undefined if none. */
-function redacted(text: string): string | undefined {
-  const lines = text.split('\n');
-  let changed = false;
-  const out = lines.map((line) => {
-    const [hit] = checkSecrets('evidence', line);
-    if (!hit?.evidence) return line;
-    changed = true;
-    return hit.evidence;
-  });
-  return changed ? out.join('\n') : undefined;
-}
-
 /**
- * The doctor redacts credentials only in its own secret findings; another
- * finding on the same line (an unpinned `npx`, a `curl | sh`) quotes the line
- * in full, and an issue id can carry a link target from an instruction file.
- * Agents read this output, so every issue's id, message, recommendation, and
- * evidence is passed through the doctor's own secret detector and redactor.
- * `file` is left as is: it is a path in the audited tree, needed to find the
- * file. Returns the number of fields changed.
+ * The doctor masks credentials in every issue's message, recommendation, and
+ * evidence before it returns. It does not mask the id, which can carry a link
+ * target or script name from an instruction file, so the id goes through the
+ * doctor's own redactor here. Running it again over the other fields would
+ * repeat the engine's last pass with the same patterns; instead the
+ * integration tests check every field for planted credentials, so an engine
+ * update that drops its masking fails CI. `file` is left as is: it is a path
+ * in the audited tree, needed to find the file. Returns the number of ids
+ * changed.
  */
 export function redactIssueText(report: ContextAuditResult): number {
   let count = 0;
   for (const issue of report.issues) {
-    for (const key of ['id', 'message', 'recommendation', 'evidence'] as const) {
-      const value = issue[key];
-      if (typeof value !== 'string') continue;
-      const clean = redacted(value);
-      if (clean === undefined) continue;
-      issue[key] = clean;
-      count++;
-    }
+    const clean = redactSecrets(issue.id);
+    if (clean === issue.id) continue;
+    issue.id = clean;
+    count++;
   }
   return count;
 }

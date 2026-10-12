@@ -9,7 +9,7 @@ export const ENGINE_PROVENANCE = {
   "context": {
     "name": "agent-context-doctor",
     "version": "1.0.0",
-    "commit": "03fa7f7f9c46aaa983f162977b4d81e2a2c4c541",
+    "commit": "034a74c88b8fd2599c61d9292e2605b405484707",
     "repository": "https://github.com/alipajand/agent-context-doctor"
   }
 } as const;
