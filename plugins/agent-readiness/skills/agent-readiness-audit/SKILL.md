@@ -21,14 +21,21 @@ and configuration files. The scores and findings come from two deterministic eng
 1. Check that Node.js 22.12 or later is available: `node --version`. If it is missing or older,
    stop and tell the user. Do not install anything.
 2. Run the bundled script on the repository the user named (default: the current working
-   directory). `<skill-dir>` is the directory that contains this `SKILL.md`; in Claude Code it is
-   `${CLAUDE_SKILL_DIR}`.
+   directory), as a command of its own, not chained to another with `&&` or `;`.
+
+   In Claude Code, run exactly this, with the script path as written (not quoted):
+
+   ```bash
+   node ${CLAUDE_SKILL_DIR}/scripts/agent-readiness.mjs audit --format json -- '<repository-path>'
+   ```
+
+   In other clients, `<skill-dir>` is the directory that contains this `SKILL.md`:
 
    ```bash
    node <skill-dir>/scripts/agent-readiness.mjs audit --format json -- '<repository-path>'
    ```
 
-   Keep the path in single quotes after `--`. If it contains a single quote, `$`, a backtick, `;`,
+   Keep the repository path in single quotes after `--`. If it contains a single quote, `$`, a backtick, `;`,
    `|`, `&`, `<`, `>`, or a line break, ask the user for a plain path instead of running anything.
 
    Use `--format markdown` instead when the user only wants a readable summary. Add

@@ -77,12 +77,21 @@ describe('plugin contents', () => {
     expect(allowed).toBe(
       'Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/agent-readiness-audit/scripts/agent-readiness.mjs *)',
     );
+    // Only the script is pre-approved: a command that sent the model to the skill made it call the
+    // Skill tool, which Claude Code denied in a headless session and would prompt for otherwise.
+    expect(command).not.toMatch(/`agent-readiness-audit` skill|\bSkill\b/);
     const skill = readFileSync(
       path.join(pluginDir, 'skills/agent-readiness-audit/SKILL.md'),
       'utf8',
     );
     expect(/^allowed-tools: (.*)$/m.exec(skill)?.[1]).toBe(
       'Bash(node ${CLAUDE_SKILL_DIR}/scripts/agent-readiness.mjs *)',
+    );
+    // Claude Code substitutes the variable before the model reads the skill, so this command has
+    // exactly the pre-approved form. With only a `<skill-dir>` placeholder, the model quoted the
+    // script path or chained it after `node --version`, and Claude Code asked for approval.
+    expect(skill).toContain(
+      "node ${CLAUDE_SKILL_DIR}/scripts/agent-readiness.mjs audit --format json -- '<repository-path>'",
     );
   });
 

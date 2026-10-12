@@ -15,7 +15,7 @@ skill, the Claude Code and Cursor plugin, and the MCP server. Integration releas
       previous engine
 - [x] CI passes on the final commit of the pull request (Linux, Node.js 22.13.0 and 24): all six
       checks passed on `0b4cc20`, including CodeQL
-- [ ] The live-client checks in § 3 pass
+- [ ] The live-client checks in § 3 pass (Claude Code and the MCP host pass; Cursor not tested)
 
 ## 1. Versions
 
@@ -58,18 +58,38 @@ pnpm integrations:typecheck && pnpm integrations:build && pnpm integrations:test
 
 ## 3. Manual client checks
 
-- [ ] Claude Code: `claude --plugin-dir ./plugins/agent-readiness`, run `/agent-readiness:audit`
+Results from 2026-10-12 (Claude Code 2.1.278, signed in, headless `claude -p` from temporary
+fixture repositories; evidence in `RELEASE-READINESS.md`):
+
+- [x] Claude Code: `claude --plugin-dir ./plugins/agent-readiness`, run `/agent-readiness:audit`
       on a sample repository, and confirm the command runs the bundled script without a permission
-      prompt and reports the engine scores
+      prompt and reports the engine scores. Passed after two fixes in this release: the command no
+      longer sends the model to the skill (the `Skill` call was denied), and `SKILL.md` gives Claude
+      Code the exact pre-approved command (a quoted script path was denied)
+- [x] Claude Code: the plugin's skill (`/agent-readiness:agent-readiness-audit`) and the skill
+      installed from GitHub with `npx skills add` run the script without a permission prompt
+- [x] Claude Code marketplace: `claude plugin marketplace add alipajand/agent-readiness-action` and
+      `claude plugin install agent-readiness@agent-readiness` into an empty `CLAUDE_CONFIG_DIR`
+- [x] One MCP host (Claude Code): add the server with `--root`, call `audit_repository`,
+      `audit_agent_context`, and `get_audit_report`, and confirm the host shows no sandbox or
+      startup error
 - [ ] Cursor: copy `plugins/agent-readiness` to `~/.cursor/plugins/local/agent-readiness`, reload,
-      run the `agent-readiness-audit` command
-- [ ] One MCP host (Claude Code or Cursor): add the server with `--root`, call `audit_repository`
-      and `audit_agent_context`, and confirm the host shows no sandbox or startup error
-- [ ] Windows, if it is to be listed as supported: run the skill script and the MCP server once
+      run the `agent-readiness-audit` command on a sample repository, and confirm it reports the
+      same scores as `node plugins/agent-readiness/skills/agent-readiness-audit/scripts/agent-readiness.mjs audit <repo>`.
+      **Not tested**: Cursor is not installed on the build machine
+- [ ] Windows, if it is to be listed as supported: run the skill script and the MCP server once.
+      **Not tested**: no Windows machine or CI job
+
+Observed host behavior, not a plugin defect: when a request in plain words made the model load the
+skill on its own, headless Claude Code denied the `Skill` tool call, and the model fell back to
+reading the files itself. An interactive session was not tested. Invoking `/agent-readiness:audit`
+or the skill by name ran the script directly.
 
 ## 4. Publish (owner only)
 
-- [ ] Merge to `main`, tag `integrations-v<version>`, push the tag
+- [ ] Merge to `main`, tag `integrations-v<version>`, push the tag, and create its GitHub release
+      (not marked Latest, so the action's release stays Latest) from
+      `docs/integrations/RELEASE-NOTES.md`
 - [ ] `npm publish` from `integrations/mcp-package` with 2FA. The package does not request npm
       provenance: npm only generates it from a supported CI provider, and no workflow here
       publishes. To publish with provenance, add a workflow with `id-token: write` that runs
