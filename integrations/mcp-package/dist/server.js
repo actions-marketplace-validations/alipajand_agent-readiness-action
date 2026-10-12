@@ -29483,7 +29483,7 @@ function unsupportedNode(version = process.versions.node) {
 
 ;// CONCATENATED MODULE: ./integrations/src/runtime/version.ts
 /** Version of the integrations runtime (CLI, skill script, MCP server). */
-const TOOL_VERSION = '0.1.0';
+const TOOL_VERSION = '0.1.1';
 
 ;// CONCATENATED MODULE: external "node:util"
 const external_node_util_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:util");

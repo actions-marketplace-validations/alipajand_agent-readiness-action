@@ -20868,7 +20868,7 @@ const ENGINE_PROVENANCE = {
 
 ;// CONCATENATED MODULE: ./integrations/src/runtime/version.ts
 /** Version of the integrations runtime (CLI, skill script, MCP server). */
-const TOOL_VERSION = '0.1.0';
+const TOOL_VERSION = '0.1.1';
 
 ;// CONCATENATED MODULE: ./integrations/src/runtime/audit.ts
 

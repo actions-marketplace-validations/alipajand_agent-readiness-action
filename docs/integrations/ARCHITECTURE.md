@@ -99,6 +99,6 @@ pins are later commits, so the commit SHA is the authoritative identifier.
   when a rebuild changes them.
 - The bundles contain the engines and their dependencies, so the skill and the MCP package have no
   runtime dependencies to install.
-- Versions: the runtime and MCP server start at `0.1.0` (`integrations/src/runtime/version.ts`),
+- Versions: the runtime and MCP server were first released as `0.1.1` (`integrations/src/runtime/version.ts`),
   independent of the action's `v1` tags. Integration releases use `integrations-v<semver>` tags so
   they never move the action's floating `v1` tag.
