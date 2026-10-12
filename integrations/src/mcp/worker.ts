@@ -12,9 +12,10 @@ export interface WorkerOptions {
   maxOutputBytes: number;
 }
 
-// Node's permission model is stable from 22.13 and 23.5. On those versions the
-// worker is granted reads of the audited directory and its own script only,
-// and cannot write files, start processes, or load native add-ons. Node does
+// Node's permission model is stable from 22.13 and 23.5, and the server does
+// not start on older releases. The worker is granted reads of the audited
+// directory and its own script only, and cannot write files, start processes,
+// or load native add-ons. Node does
 // not stop a granted read from following a symlink out of the directory, so
 // containment of reads still rests on the engines' own symlink checks; the
 // sandbox is a second layer.
@@ -58,14 +59,9 @@ export function runWorker(
       ),
     );
   }
-  const sandbox = supportsPermissionModel()
-    ? [
-        '--permission',
-        ...readGrants([options.workerPath, target]).map((p) => `--allow-fs-read=${p}`),
-      ]
-    : [];
   const args = [
-    ...sandbox,
+    '--permission',
+    ...readGrants([options.workerPath, target]).map((p) => `--allow-fs-read=${p}`),
     options.workerPath,
     'audit',
     target,

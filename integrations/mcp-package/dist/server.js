@@ -31860,9 +31860,10 @@ const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createReq
 
 
 
-// Node's permission model is stable from 22.13 and 23.5. On those versions the
-// worker is granted reads of the audited directory and its own script only,
-// and cannot write files, start processes, or load native add-ons. Node does
+// Node's permission model is stable from 22.13 and 23.5, and the server does
+// not start on older releases. The worker is granted reads of the audited
+// directory and its own script only, and cannot write files, start processes,
+// or load native add-ons. Node does
 // not stop a granted read from following a symlink out of the directory, so
 // containment of reads still rests on the engines' own symlink checks; the
 // sandbox is a second layer.
@@ -31890,14 +31891,9 @@ function runWorker(target, engine, options) {
     if (target.includes('*')) {
         return Promise.reject(new AuditRuntimeError('INVALID_PATH', 'Paths containing "*" cannot be audited by the MCP server.'));
     }
-    const sandbox = supportsPermissionModel()
-        ? [
-            '--permission',
-            ...readGrants([options.workerPath, target]).map((p) => `--allow-fs-read=${p}`),
-        ]
-        : [];
     const args = [
-        ...sandbox,
+        '--permission',
+        ...readGrants([options.workerPath, target]).map((p) => `--allow-fs-read=${p}`),
         options.workerPath,
         'audit',
         target,
@@ -32199,6 +32195,12 @@ async function main() {
         process.stderr.write(`${runtimeProblem}\n`);
         process.exit(1);
     }
+    // Audits run in a worker confined by Node's permission model. Without it
+    // the server does not start, rather than audit unconfined.
+    if (!supportsPermissionModel()) {
+        process.stderr.write(`The agent-readiness MCP server needs Node.js 22.13 or later (23.5 or later on Node.js 23) for its read-only audit sandbox; this is Node.js ${process.versions.node}.\n`);
+        process.exit(1);
+    }
     if (process.argv.includes('--help') || process.argv.includes('-h')) {
         process.stderr.write(USAGE);
         return;
@@ -32223,9 +32225,6 @@ async function main() {
     await server.connect(new StdioServerTransport());
     // Diagnostics go to stderr; stdout carries only protocol messages.
     process.stderr.write(`agent-readiness MCP server ${TOOL_VERSION} ready; roots: ${config.roots.join(', ')}\n`);
-    if (!supportsPermissionModel()) {
-        process.stderr.write(`Node.js ${process.versions.node} has no stable permission model; audit workers run without the read-only sandbox. Use Node.js 22.13 or later.\n`);
-    }
 }
 main().catch((err) => {
     process.stderr.write(`agent-readiness MCP server failed: ${toAuditError(err).message}\n`);

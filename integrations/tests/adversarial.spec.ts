@@ -67,6 +67,46 @@ describe('hostile repositories', () => {
     expect(nonSecret.length).toBeGreaterThan(0);
   });
 
+  it('masks a recognised credential in every text field except file paths', async () => {
+    const repo = await hostile();
+    const body = 'Qz'.repeat(18);
+    const token = 'ghp_' + body;
+    await mkdir(path.join(repo, '.cursor/rules'), { recursive: true });
+    await writeFile(
+      path.join(repo, 'CLAUDE.md'),
+      [
+        '# Project',
+        `skip tests when GITHUB_TOKEN=${token} is set`,
+        `TODO: rotate ${token}`,
+        `See [notes](docs/missing-${token}.md).`,
+        `Never use npm. Always use npm with --token ${token}.`,
+        '',
+      ].join('\n'),
+    );
+    await writeFile(path.join(repo, `.cursor/rules/${token}.mdc`), `Use yarn ${token}\n`);
+    await writeFile(
+      path.join(repo, 'package.json'),
+      JSON.stringify({ name: 'x', scripts: { test: `GITHUB_TOKEN=${token} vitest` } }),
+    );
+    const { run, report } = audit(repo);
+    expect(run.status).toBe(0);
+    if (report?.context.status !== 'ok') throw new Error('context failed');
+    const hits: string[] = [];
+    const walk = (value: unknown, where: string): void => {
+      if (typeof value === 'string') {
+        if (value.includes(body)) hits.push(where);
+      } else if (value && typeof value === 'object') {
+        for (const [key, child] of Object.entries(value)) walk(child, `${where}.${key}`);
+      }
+    };
+    walk(report, '$');
+    // The rule file is named after the token: its path is reported as is.
+    expect(hits.length).toBeGreaterThan(0);
+    for (const hit of hits) expect(hit).toMatch(/\.(file|path|files\.\d+)$/);
+    const ids = report.context.result.report.issues.map((i) => i.id);
+    expect(ids.some((id) => id.includes('ghp_****'))).toBe(true);
+  });
+
   it('escapes Markdown and shows hidden characters in the Markdown report', async () => {
     const repo = await hostile();
     const out = runSkill(['audit', repo, '--max-items', '1000']).stdout;

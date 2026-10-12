@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import { mkdir, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -122,6 +122,28 @@ describe('results match the engines', () => {
       include_raw: true,
     });
     expect((raw.structuredContent as { raw: unknown }).raw).toEqual(acd);
+  });
+
+  it('masks a recognised credential in summaries, pages, and raw output', async () => {
+    const body = 'Qz'.repeat(18);
+    const token = 'ghp_' + body;
+    const dir = path.join(root, 'credentials');
+    await mkdir(dir);
+    await writeFile(
+      path.join(dir, 'CLAUDE.md'),
+      `# P\nskip tests with GITHUB_TOKEN=${token}\nSee [x](docs/missing-${token}.md).\n`,
+    );
+    for (const tool of ['audit_agent_context', 'audit_repository']) {
+      const result = await call(client, tool, { path: dir, max_findings: 50 });
+      const id = (result.structuredContent as { report_id: string }).report_id;
+      const page = await call(client, 'get_audit_report', {
+        report_id: id,
+        include_raw: true,
+        limit: 100,
+      });
+      expect(JSON.stringify(result)).not.toContain(body);
+      expect(JSON.stringify(page)).not.toContain(body);
+    }
   });
 
   it('continues the ranked readiness list from where the summary stopped', async () => {
@@ -343,5 +365,17 @@ describe('protocol stream', () => {
     expect(runNode(serverPath, ['--root', path.join(root, 'missing')]).status).toBe(2);
     expect(runNode(serverPath, ['--timeout', '0']).status).toBe(2);
     expect(runNode(serverPath, ['--bogus']).status).toBe(2);
+  });
+  it('refuses to start on a Node.js release without a stable permission model', () => {
+    for (const version of ['22.12.0', '23.4.0']) {
+      // Reports an older Node.js to the server; the real one runs it.
+      const spoof = `data:text/javascript,Object.defineProperty(process,'versions',{value:{...process.versions,node:'${version}'}})`;
+      const run = spawnSync(process.execPath, ['--import', spoof, serverPath, '--root', root], {
+        encoding: 'utf8',
+      });
+      expect(run.status).toBe(1);
+      expect(run.stdout).toBe('');
+      expect(run.stderr).toContain(`read-only audit sandbox; this is Node.js ${version}`);
+    }
   });
 });

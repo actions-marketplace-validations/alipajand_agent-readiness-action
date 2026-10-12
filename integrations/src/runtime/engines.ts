@@ -56,14 +56,16 @@ function redacted(text: string): string | undefined {
 /**
  * The doctor redacts credentials only in its own secret findings; another
  * finding on the same line (an unpinned `npx`, a `curl | sh`) quotes the line
- * in full. Agents read this output, so every issue's evidence and message is
- * passed through the doctor's own secret detector and redactor. Returns the
- * number of fields changed.
+ * in full, and an issue id can carry a link target from an instruction file.
+ * Agents read this output, so every issue's id, message, recommendation, and
+ * evidence is passed through the doctor's own secret detector and redactor.
+ * `file` is left as is: it is a path in the audited tree, needed to find the
+ * file. Returns the number of fields changed.
  */
 export function redactIssueText(report: ContextAuditResult): number {
   let count = 0;
   for (const issue of report.issues) {
-    for (const key of ['evidence', 'message'] as const) {
+    for (const key of ['id', 'message', 'recommendation', 'evidence'] as const) {
       const value = issue[key];
       if (typeof value !== 'string') continue;
       const clean = redacted(value);

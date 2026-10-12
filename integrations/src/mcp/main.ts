@@ -14,6 +14,14 @@ async function main(): Promise<void> {
     process.stderr.write(`${runtimeProblem}\n`);
     process.exit(1);
   }
+  // Audits run in a worker confined by Node's permission model. Without it
+  // the server does not start, rather than audit unconfined.
+  if (!supportsPermissionModel()) {
+    process.stderr.write(
+      `The agent-readiness MCP server needs Node.js 22.13 or later (23.5 or later on Node.js 23) for its read-only audit sandbox; this is Node.js ${process.versions.node}.\n`,
+    );
+    process.exit(1);
+  }
   if (process.argv.includes('--help') || process.argv.includes('-h')) {
     process.stderr.write(USAGE);
     return;
@@ -41,11 +49,6 @@ async function main(): Promise<void> {
   process.stderr.write(
     `agent-readiness MCP server ${TOOL_VERSION} ready; roots: ${config.roots.join(', ')}\n`,
   );
-  if (!supportsPermissionModel()) {
-    process.stderr.write(
-      `Node.js ${process.versions.node} has no stable permission model; audit workers run without the read-only sandbox. Use Node.js 22.13 or later.\n`,
-    );
-  }
 }
 
 main().catch((err: unknown) => {
