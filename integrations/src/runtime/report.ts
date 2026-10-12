@@ -86,11 +86,18 @@ function escapeText(value: string): string {
   );
 }
 
-/** A code span: its content is shown literally and never becomes a link. */
+/**
+ * A code span: its content is shown literally and never becomes a link.
+ *
+ * Only `|` is escaped, so the span cannot end a table cell. Backslashes are
+ * left alone: a code span shows them as typed, and a GFM table treats every
+ * `\|` as an escaped pipe whatever precedes it, so `a\` followed by `|`
+ * renders as `a\|` in one cell.
+ */
 function codeSpan(value: string): string {
   const longest = Math.max(0, ...(value.match(/`+/g) ?? []).map((run) => run.length));
   const fence = '`'.repeat(longest + 1);
-  return `${fence} ${value.replace(/\|/g, '\\|')} ${fence}`;
+  return `${fence} ${value.split('|').join('\\|')} ${fence}`;
 }
 
 /**

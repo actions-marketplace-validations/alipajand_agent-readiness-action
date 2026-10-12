@@ -82,6 +82,11 @@ describe('md autolinks', () => {
     expect(md('mail a.b@evil.example')).toBe('mail ` a.b@evil.example `');
     expect(md('x javascript://`a`|b')).toBe('x `` javascript://`a`\\|b ``');
   });
+
+  it('escapes pipes in code spans and leaves backslashes as typed', () => {
+    expect(md('https://x.example/a\\|b')).toBe('` https://x.example/a\\\\|b `');
+    expect(md('https://x.example/a\\')).toBe('` https://x.example/a\\ `');
+  });
 });
 
 describe('formatMarkdown', () => {
