@@ -6,6 +6,14 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ## [Unreleased]
 
+### Added
+
+- Portable integrations built from the same pinned engines, in a new `integrations/` workspace package. The action's inputs, outputs, and `dist/` are unchanged.
+  - Agent Skill `agent-readiness-audit` with a self-contained, read-only audit script (`plugins/agent-readiness/skills/agent-readiness-audit/`).
+  - Claude Code and Cursor plugin `agent-readiness`, listed by `.claude-plugin/marketplace.json` and `.cursor-plugin/marketplace.json`.
+  - Local MCP server `@alipajand/agent-readiness-mcp` (`integrations/mcp-package/`, not yet published) with `audit_repository`, `audit_agent_context`, and `get_audit_report`.
+  - CI job that rebuilds and checks the committed bundles and runs the integration tests on Node.js 22.13 and 24.
+
 ## [1.1.0] - 2026-10-09
 
 ### Changed

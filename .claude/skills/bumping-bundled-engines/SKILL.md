@@ -12,5 +12,10 @@ description: Move the vendored agent-readiness-kit or agent-context-doctor submo
    modules `src/runArk.ts` and `src/runDoctor.ts` use), add it to `package.json`.
 4. Run `/verify`. Fix type errors in `src/runArk.ts` or `src/runDoctor.ts` if the engine's API
    changed; never edit files under `vendor/`.
-5. Commit the submodule pointer and the rebuilt `dist/` together. CI fails when `dist/` is stale.
-6. Note the engine change in `CHANGELOG.md`.
+5. Stage the submodule pointer, then run `pnpm integrations:build` and `pnpm integrations:test`.
+   The build refuses to run until the submodule commit is staged, and it regenerates the skill
+   script, the MCP server bundle, and `integrations/src/runtime/provenance.generated.ts`.
+6. Commit the submodule pointer, the rebuilt `dist/`, and the rebuilt integration bundles together.
+   CI fails when any of them is stale.
+7. Note the engine change in `CHANGELOG.md`, and release a new integrations version
+   (`docs/RELEASE-CHECKLIST.md`) so plugin and MCP users receive it.

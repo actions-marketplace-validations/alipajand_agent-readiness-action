@@ -279,6 +279,19 @@ Before tagging a release:
    it: `git tag -f v1 v1.2.0`, then push both tags (`git push -f origin v1`). Workflows that use
    `@v1` pick up the release; pin a full commit SHA to review every change first.
 
+## Outside GitHub Actions
+
+The same pinned engines are packaged for local use by AI coding agents, read-only and offline:
+
+- **Agent Skill** `agent-readiness-audit` for Claude Code, Cursor, Codex, and other skill clients:
+  [docs/integrations/SKILL-USAGE.md](docs/integrations/SKILL-USAGE.md)
+- **Claude Code and Cursor plugin** `agent-readiness`:
+  [docs/integrations/PLUGINS.md](docs/integrations/PLUGINS.md)
+- **Local MCP server** `@alipajand/agent-readiness-mcp`:
+  [integrations/mcp-package/README.md](integrations/mcp-package/README.md)
+
+See [docs/distribution/README.md](docs/distribution/README.md) for what is published where.
+
 ## Related tools
 
 - [agent-readiness-kit](https://github.com/alipajand/agent-readiness-kit) — CLI used by this action.
