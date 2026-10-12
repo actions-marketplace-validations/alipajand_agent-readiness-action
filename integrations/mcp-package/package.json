@@ -1,0 +1,43 @@
+{
+  "name": "@alipajand/agent-readiness-mcp",
+  "version": "0.1.0",
+  "description": "Local MCP server that scores repository readiness for AI coding agents and checks agent instruction files. Deterministic, read-only, offline.",
+  "mcpName": "io.github.alipajand/agent-readiness",
+  "type": "module",
+  "bin": {
+    "agent-readiness-mcp": "dist/server.js"
+  },
+  "files": [
+    "dist",
+    "server.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": "^22.13.0 || >=23.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alipajand/agent-readiness-action.git",
+    "directory": "integrations/mcp-package"
+  },
+  "homepage": "https://github.com/alipajand/agent-readiness-action/blob/main/docs/integrations/MCP-SERVER.md",
+  "bugs": {
+    "url": "https://github.com/alipajand/agent-readiness-action/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai-coding-agents",
+    "agent-readiness",
+    "agents-md",
+    "claude-md",
+    "cursor-rules",
+    "security-audit"
+  ],
+  "author": "Ali Pajand",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -13,18 +13,23 @@
     "lint": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "integrations:build": "pnpm --filter ./integrations build",
+    "integrations:test": "pnpm --filter ./integrations test",
+    "integrations:typecheck": "pnpm --filter ./integrations typecheck"
   },
   "dependencies": {
     "@actions/core": "^3.0.1",
     "@actions/github": "^9.1.1",
-    "fast-glob": "^3.3.3",
+    "tinyglobby": "^0.2.17",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^24.19.1",
     "@vercel/ncc": "^0.45.0",
     "@vitest/coverage-v8": "^4.1.11",
+    "commander": "15.0.0",
+    "picocolors": "1.1.1",
     "prettier": "^3.9.9",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"

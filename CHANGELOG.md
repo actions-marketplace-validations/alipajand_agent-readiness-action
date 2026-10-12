@@ -6,6 +6,23 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ## [Unreleased]
 
+### Added
+
+- Portable integrations built from the same pinned engines, in a new `integrations/` workspace package. The action's inputs and outputs are unchanged; its `dist/` changes only through the engine update below.
+  - Agent Skill `agent-readiness-audit` with a self-contained, read-only audit script (`plugins/agent-readiness/skills/agent-readiness-audit/`).
+  - Claude Code and Cursor plugin `agent-readiness`, listed by `.claude-plugin/marketplace.json` and `.cursor-plugin/marketplace.json`.
+  - Local MCP server `@alipajand/agent-readiness-mcp` (`integrations/mcp-package/`, not yet published) with `audit_repository`, `audit_agent_context`, and `get_audit_report`. Each audit runs in a worker confined by Node's permission model, so the server needs Node.js 22.13 or later (23.5 or later on Node.js 23) and refuses to start on older releases; the skill script runs on 22.12.
+  - CI job that rebuilds and checks the committed bundles and runs the integration tests on Node.js 22.13 and 24.
+
+### Security
+
+- Bundled engines moved to the latest `main`: agent-readiness-kit `b490a30` → `f15924b` (agent-readiness-kit#33) and agent-context-doctor `d70de51` → `034a74c` (agent-context-doctor#73 and #74). Both replace `fast-glob` with `tinyglobby`, so `braces` is no longer installed or compiled into `dist/` and the integration bundles. `braces` 3.0.3 has a stack-exhaustion advisory with no patched release (GHSA-vfj7-8cjw-p6xm). Symlinked directories are still not walked, and the `.acdrc` brace limits still apply. The action's `fast-glob` dependency, which only supplied the engines, is replaced by `tinyglobby`. One behavior changes, on case-insensitive filesystems only (macOS and Windows runners): the readiness engine's lookups of fixed file names such as `README.md`, `CHANGELOG.md`, `package.json`, or `.tool-versions` now match the exact case, as they always did on Linux. A repository with `Readme.md` audited on a macOS runner loses the README documentation points it got before (one point on the test fixture), the same result Linux runners give. Otherwise the old and new `dist/` gave identical output on 21 local repositories and on a fixture of symlinks, brace patterns, mixed-case names, and deep nesting; on a case-sensitive volume, as on Linux, that fixture matched too.
+- With `context-audit: 'true'`, the bundled agent-context-doctor (agent-context-doctor#74) changes what the action prints and reads. Scores, grades, issue counts, outputs, and the job summary were identical to the previous engine on 27 local repositories; only the following differ:
+  - A recognised credential quoted by a finding other than `secrets` is masked (`ghp_************`) in the log, the `json` output, and the issue table of the job summary and PR comment. Before, a token on a `curl | sh` line, in a placeholder, in a missing link target, or in a `.claude/settings.json` permission was shown in full.
+  - A credential configured in an MCP server's `env` or `headers` is masked in every finding that quotes its line.
+  - An `.acdrc` that is a symlink to a file outside `repo-path` fails the step with `.acdrc … links outside …; refusing to read it`. Before, a pull request could link `.acdrc` to a file on the runner: the step printed the start of that file in a JSON parse error, or applied it as configuration if it was valid JSON. A link to a file inside the repository still works.
+  - Masking and evidence no longer take quadratic time on hostile input (a line with thousands of distinct tokens, or a file with tens of thousands of flagged lines).
+
 ## [1.1.0] - 2026-10-09
 
 ### Changed

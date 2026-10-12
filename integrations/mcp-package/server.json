@@ -1,0 +1,24 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.alipajand/agent-readiness",
+  "title": "Agent Readiness",
+  "description": "Deterministic, read-only audits of repo readiness for AI coding agents and of agent context files.",
+  "repository": {
+    "url": "https://github.com/alipajand/agent-readiness-action",
+    "source": "github",
+    "subfolder": "integrations/mcp-package"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@alipajand/agent-readiness-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

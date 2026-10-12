@@ -1,0 +1,23 @@
+{
+  "name": "@alipajand/agent-readiness-integrations",
+  "version": "0.1.0",
+  "description": "Portable adapters (CLI, Agent Skill, plugins, MCP server) around the bundled agent-readiness-kit and agent-context-doctor engines",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.2.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.2.0",
+    "ajv": "8.18.0"
+  }
+}

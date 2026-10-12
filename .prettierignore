@@ -4,3 +4,8 @@ node_modules
 coverage
 pnpm-lock.yaml
 licenses.txt
+# Generated integration bundles and vendored reference data
+plugins/agent-readiness/skills/agent-readiness-audit/scripts
+integrations/mcp-package/dist
+integrations/src/runtime/provenance.generated.ts
+integrations/tests/schemas
