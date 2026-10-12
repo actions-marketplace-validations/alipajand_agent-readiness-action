@@ -1,61 +1,63 @@
 # Release readiness
 
-Status on 2026-10-12, after the reconciliation review of this branch and agent-context-doctor#74.
-Nothing has been merged, published, tagged, or submitted.
+Status on 2026-10-12, after agent-context-doctor#74 was merged and `vendor/agent-context-doctor`
+moved to its merge commit `034a74c`. Nothing has been published, tagged, or submitted.
 
 ## Verdict
 
-**BLOCKED** on one dependency: agent-context-doctor#74 must be merged and `vendor/agent-context-doctor`
-moved to its merge commit. That pull request fixes security findings A, B, E, and F
-([SECURITY-FINDINGS.md](SECURITY-FINDINGS.md)), which affect the released action as well as the
-integrations. Everything else on this branch is done and verified, apart from the live-client checks
-listed below, which are owner steps.
+**Ready to merge after review. Not ready to publish:** the live-client checks below are owner
+steps that have not been run. No automated check is failing and no security finding is open apart
+from D (dev-only, see [SECURITY-FINDINGS.md](SECURITY-FINDINGS.md)).
+
+## Engines
+
+| Engine               | Commit    | Upstream                                                                                       |
+| -------------------- | --------- | ---------------------------------------------------------------------------------------------- |
+| agent-readiness-kit  | `f15924b` | `main`, agent-readiness-kit#33                                                                 |
+| agent-context-doctor | `034a74c` | `main`, merge commit of agent-context-doctor#74; contains `d40fbb2` and `d434560` from that PR |
+
+`integrations/src/runtime/provenance.generated.ts`, the skill script header, and the MCP bundle
+header name both commits.
 
 ## What changes for GitHub Action users
 
 `action.yml`, `src/`, the inputs, the outputs, and the comment format are unchanged. `dist/index.js`
-and `dist/licenses.txt` change because both engines moved to `tinyglobby` (agent-readiness-kit
-`b490a30` → `f15924b`, agent-context-doctor `d70de51` → `03fa7f7`):
+and `dist/licenses.txt` change because both engines moved (agent-readiness-kit `b490a30` →
+`f15924b`, agent-context-doctor `d70de51` → `034a74c`):
 
-| Area                      | Runtime effect                                                                                                                                                                                                                                                  | Evidence                                                                                                                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Bundled packages          | `fast-glob`, `braces`, `micromatch`, and their dependencies leave `dist/`; `tinyglobby` and `fdir` enter. No network or new runtime capability                                                                                                                  | `dist/licenses.txt` diff                                                                                                                                                                                                                   |
-| Linux runners             | No change in scores, findings, logs, summaries, or outputs                                                                                                                                                                                                      | `main` and this branch's `dist/` run side by side: identical on 21 local repositories and on a fixture of symlinks (file, directory, `/`), brace patterns in `.acdrc`, mixed-case names, and deep nesting, also on a case-sensitive volume |
-| macOS and Windows runners | Fixed-name lookups in the readiness engine (`README.md`, `CHANGELOG.md`, `package.json`, `.tool-versions`, …) now match case exactly, as on Linux. `Readme.md` no longer counts as `README.md` for the documentation checks                                     | Same comparison on a case-insensitive volume: the mixed-case fixture scored 37 instead of 38                                                                                                                                               |
-| Root dependencies         | `fast-glob` replaced by `tinyglobby` (bundled). `commander` and `picocolors` added as pinned dev dependencies so the tests can build the engines' own CLIs for parity checks; the integrations workspace adds the MCP SDK, `zod`, and `ajv`. None reach `dist/` | `package.json`, `pnpm-lock.yaml`                                                                                                                                                                                                           |
+| Area                                | Runtime effect                                                                                                                                                                                                                                           | Evidence                                                                                                                                                                                                         |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bundled packages                    | `fast-glob`, `braces`, `micromatch`, and their dependencies leave `dist/`; `tinyglobby` and `fdir` enter. No network or new runtime capability                                                                                                           | `dist/licenses.txt` diff                                                                                                                                                                                         |
+| Scores and outputs, Linux           | No change in readiness score, category scores, context score, grade, issue count, outputs, or job summary                                                                                                                                                | `main`'s `dist/` against the `03fa7f7` build: identical on 21 local repositories and an edge-case fixture. The `03fa7f7` build against this one: identical outputs and summaries on 27 repositories and fixtures |
+| macOS and Windows runners           | Fixed-name lookups in the readiness engine (`README.md`, `CHANGELOG.md`, `package.json`, `.tool-versions`, …) now match case exactly, as on Linux. `Readme.md` no longer counts as `README.md` for the documentation checks                              | On a case-insensitive volume, the mixed-case fixture scored 37 instead of 38                                                                                                                                     |
+| Credentials in the log and comments | With `context-audit: true`, a recognised credential quoted by a non-secret finding is masked in the log, the `json` output, and the job summary and PR comment issue table. The log of the credential fixture is the only log that changed in 27 runs    | Previous build: the fixture's GitHub-shaped token printed on three log lines. This build: zero occurrences in the log, summary, and outputs                                                                      |
+| `.acdrc` linking outside the repo   | With `context-audit: true`, the step fails with `.acdrc … links outside …; refusing to read it`. Before, it quoted the first characters of the linked file in a parse error, or applied a JSON file as configuration. A link inside the repository works | Action run on a repository whose `.acdrc` links to a text file and to a JSON file outside it, with both builds                                                                                                   |
+| Root dependencies                   | `fast-glob` replaced by `tinyglobby` (bundled). `commander` and `picocolors` added as pinned dev dependencies for the parity tests; the integrations workspace adds the MCP SDK, `zod`, and `ajv`. None reach `dist/`                                    | `package.json`, `pnpm-lock.yaml`                                                                                                                                                                                 |
 
-Once agent-context-doctor#74 is in, the action also stops printing recognised credentials quoted by
-non-secret findings in its log (finding B), and refuses an `.acdrc` that links outside the
-repository (finding A). Baseline fingerprints change only for findings whose message or evidence
-contained a credential. The dry run below confirmed both on this branch.
+The action does not use the doctor's baseline fingerprints, so the fingerprint change noted in the
+doctor's changelog does not affect `baseline-ref`.
 
-## Dry run of the required engine bump
+## Automated checks on the final commit
 
-`vendor/agent-context-doctor` moved locally to `d434560` (agent-context-doctor#74 plus the redaction
-fix), with every artifact regenerated. Not pushed: the release must pin the merge commit instead.
+| Check                                                                      | Result                                                                                                                                                                                                                                                                                                                            |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prettier on tracked files, `pnpm typecheck`, `pnpm integrations:typecheck` | Pass                                                                                                                                                                                                                                                                                                                              |
+| `pnpm test`                                                                | 8 files, 138 tests pass                                                                                                                                                                                                                                                                                                           |
+| `pnpm integrations:test`                                                   | 16 files, 116 tests pass on Node.js 24 and on Node.js 22.13.0 (macOS)                                                                                                                                                                                                                                                             |
+| Credential regression tests                                                | The two credential tests in `adversarial.spec.ts` fail when the same runtime is built against the previous engine (`03fa7f7`) and pass against `034a74c`                                                                                                                                                                          |
+| `pnpm build`, `pnpm integrations:build` twice                              | No diff: `dist/` and both integration bundles are reproducible                                                                                                                                                                                                                                                                    |
+| `npm pack` of the MCP package twice                                        | Byte-identical tarballs (SHA-256 `d1cab977…`)                                                                                                                                                                                                                                                                                     |
+| Action vs skill                                                            | Same readiness score, all 13 category scores, context score, grade, and issue count on 27 repositories and fixtures                                                                                                                                                                                                               |
+| Credential sweep                                                           | Four synthetic credentials (a GitHub token, an AWS key id, a second GitHub token, and a configured MCP `env` value) absent from the action's log, summary, and outputs, the plugin's skill JSON and Markdown, and every MCP tool result including `include_raw`. The same sweep finds 21 leaks in the previous commit's artifacts |
+| GitHub CI                                                                  | Linux, Node.js 22.13.0 and 24; see the pull request checks for the final commit                                                                                                                                                                                                                                                   |
 
-| Check                                                       | Result                                                                                                                  |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `pnpm typecheck`, `pnpm test`, `pnpm build`                 | Pass; 138 tests; `dist/index.js` regenerated                                                                            |
-| `pnpm integrations:build`, `pnpm integrations:test`         | Pass; 116 tests, after updating `adversarial.spec.ts` (the engine now masks, so the runtime's own redaction count is 0) |
-| `provenance.generated.ts` and bundle headers                | Name `d434560` and `f15924b`                                                                                            |
-| Action vs skill on 8 repositories                           | Same readiness score, context score, and issue count on each                                                            |
-| Credentials in the action's log, summary, and outputs       | 0 occurrences (3 lines on `main` and on this branch today)                                                              |
-| Configured credential in a one-line `.mcp.json` (finding F) | Absent from the skill's JSON and Markdown and from MCP output                                                           |
+## Runtime redaction after the engine update
 
-## Implemented and verified
-
-- Skill, CLI, Claude Code and Cursor plugin, and MCP server, as listed in
-  [FINAL-RELEASE-AUDIT.md](FINAL-RELEASE-AUDIT.md).
-- MCP server requires Node.js 22.13+ (23.5+ on Node.js 23) and refuses to start otherwise, instead
-  of running workers without the read-only sandbox.
-- Issue ids and recommendations go through the credential redactor, with message and evidence.
-- Generated files reproduce: `dist/` and both integration builds are identical after rebuilding;
-  two `npm pack` runs give byte-identical tarballs; provenance and bundle headers match the
-  submodule commits.
-- Linux: CI runs the action, its tests, and the integration suite on Node.js 22.13.0 and 24 for
-  every push (see the pull request checks for the final commit). Node.js 22.13.0 on macOS: the MCP,
-  worker, parity, and adversarial suites pass locally.
+The engine masks every issue's `message`, `recommendation`, and `evidence`. The integrations runtime
+no longer repeats that pass; it masks only the issue `id`, which the engine leaves as written and
+which can carry a link target. It keeps its own `.acdrc` link check, which refuses the link before
+the engine opens anything and names no absolute path. The integration tests check every field for
+planted credentials, so an engine update that dropped its masking would fail CI.
 
 ## Not verified (owner steps; none were run)
 
@@ -80,8 +82,7 @@ fix), with every artifact regenerated. Not pushed: the release must pin the merg
 
 ## Remaining blockers
 
-| Blocker                            | Severity                   | Evidence                                                                       | Owner action                                                                                                                                           |
-| ---------------------------------- | -------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| agent-context-doctor#74 not merged | Medium                     | Findings A, B, E, F reproduced on `main` and this branch; fixed in the dry run | Review and merge it, then move the submodule to the merge commit with the `bumping-bundled-engines` skill and commit the dry run's test change with it |
-| Live-client checks                 | Release gate, not a defect | Not run                                                                        | `RELEASE-CHECKLIST.md` § 3                                                                                                                             |
-| Action release                     | Process                    | `dist/` changes                                                                | Release a new action version after merge                                                                                                               |
+| Blocker            | Severity                   | Evidence        | Owner action                                                                                  |
+| ------------------ | -------------------------- | --------------- | --------------------------------------------------------------------------------------------- |
+| Live-client checks | Release gate, not a defect | Not run         | `RELEASE-CHECKLIST.md` § 3, before publishing the plugin or the MCP package                   |
+| Action release     | Process                    | `dist/` changes | After merge, release a new action version and note the two runtime changes above in its notes |

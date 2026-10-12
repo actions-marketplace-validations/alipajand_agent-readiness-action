@@ -54,9 +54,9 @@ The exact output of `ark audit --json` from agent-readiness-kit.
 
 ## Context report (`context.result.report`)
 
-The output of `acd audit --json` from agent-context-doctor, with one change: credentials quoted in
-any issue's `evidence` or `message` are redacted (the engine itself redacts them only in secret
-findings). `redactions` counts the fields changed; `0` means the report is exactly the engine's.
+The output of `acd audit --json` from agent-context-doctor, with one change: credentials in an
+issue's `id` are masked, as the engine already masks them in `message`, `recommendation`, and
+`evidence`. `redactions` counts the ids changed; `0` means the report is exactly the engine's.
 `configApplied` is `true` when rules from the audited repository's `.acdrc` were used.
 
 | Field      | Meaning                                                                                                                                         |

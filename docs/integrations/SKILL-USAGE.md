@@ -56,9 +56,10 @@ Differences from running the engine CLIs yourself:
 - `.arkrc` is ignored. It only sets CLI options (`repoPath`, `output`, `json`, `minScore`), none of
   which change the score, but an invalid `.arkrc` makes `ark audit` exit with an error where the
   skill still reports a score.
-- Credentials quoted in a context issue's `evidence` or `message` are redacted; the doctor redacts
-  them only in its secret findings. `context.result.redactions` counts these changes, and when it
-  is `0` the report is exactly the engine's.
+- Credentials are masked in every context issue's `message`, `recommendation`, and `evidence` by
+  the doctor, and in its `id` by the skill, since an id can carry a link target from an
+  instruction file. `context.result.redactions` counts the ids changed; when it is `0` the report
+  is exactly the engine's. File paths are reported as they are.
 - An `.acdrc` that is a symlink to a file outside the repository is refused with `CONFIG_INVALID`
   instead of being read.
 - `.acdrc` rules (`ignoreFiles`, `disabledChecks`, `allowedMissingScripts`, `maxFileBytes`) apply.

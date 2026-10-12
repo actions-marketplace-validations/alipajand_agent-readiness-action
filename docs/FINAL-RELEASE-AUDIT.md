@@ -8,7 +8,9 @@ and every claim below was re-run at the end.
 
 A later reconciliation review on the same day corrected this document where the branch had moved
 on: the engine update changed the action's `dist/`, `agent-context-doctor#74` became a release
-dependency, and its masking had a quadratic case. Current status, blockers, and evidence are in
+dependency, and its masking had a quadratic case. #74 has since been merged (with the fix for that
+case) and the doctor is bundled at its merge commit `034a74c`; findings A, B, E, and F are fixed.
+Current status, blockers, and evidence are in
 [RELEASE-READINESS.md](RELEASE-READINESS.md); findings are in
 [SECURITY-FINDINGS.md](SECURITY-FINDINGS.md).
 
@@ -74,7 +76,6 @@ issues) for this repository, the same as the skill.
 
 1. Push the branch and let the new CI job pass on Linux (Node 22.13 and 24).
 2. Run the two manual client checks (Claude Code live session, Cursor local plugin).
-3. Decide on open finding A (the action's `.acdrc` symlink handling); the upstream fix also
-   covers the integrations' guard.
+3. Done: finding A (the action's `.acdrc` symlink handling) is fixed upstream and bundled.
 
 Everything else in the open list is pre-existing and does not block the integrations release.

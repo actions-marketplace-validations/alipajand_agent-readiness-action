@@ -6,13 +6,15 @@ skill, the Claude Code and Cursor plugin, and the MCP server. Integration releas
 
 ## 0. Release gate
 
-- [ ] agent-context-doctor#74 is merged (security findings A, B, E, F), and
-      `vendor/agent-context-doctor` points at the merge commit on its `main`, not at a branch commit
-- [ ] The bump was made with the `bumping-bundled-engines` skill: `dist/`, the skill script, the MCP
+- [x] agent-context-doctor#74 is merged (security findings A, B, E, F), and
+      `vendor/agent-context-doctor` points at its merge commit `034a74c` on `main`
+- [x] The bump was made with the `bumping-bundled-engines` skill: `dist/`, the skill script, the MCP
       bundles, and `provenance.generated.ts` rebuilt and committed together
-- [ ] `integrations/tests/adversarial.spec.ts` also asserts the configured-credential case (a value
-      under `env.API_TOKEN` in a one-line `.mcp.json` never appears in the output); it passes only
-      with the bumped engine
+- [x] `integrations/tests/adversarial.spec.ts` asserts the configured-credential case (a value under
+      `env.API_TOKEN` in a one-line `.mcp.json` never appears in the output); it fails against the
+      previous engine
+- [ ] CI passes on the final commit of the pull request (Linux, Node.js 22.13.0 and 24)
+- [ ] The live-client checks in § 3 pass
 
 ## 1. Versions
 

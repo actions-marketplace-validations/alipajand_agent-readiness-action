@@ -4,8 +4,9 @@ Checked on 2026-10-12. Status values: **PUBLISHED** (live), **READY** (all techn
 verified; only owner steps remain), **NEEDS WORK** (technical work or a verification step is
 missing), **BLOCKED** (an external requirement prevents it), **SUBMITTED** (awaiting review).
 Nothing was submitted or published during this work. Every **READY** row also waits on the release
-gate in [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) § 0: agent-context-doctor#74 merged and the
-submodule moved to its merge commit.
+gate in [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) § 0. agent-context-doctor#74 is merged and the
+submodule is at its merge commit `034a74c`; CI on the final commit and the live-client checks
+remain.
 
 ## Priority targets
 
@@ -33,8 +34,8 @@ submodule moved to its merge commit.
 
 ## Owner-only actions, in order
 
-1. Merge agent-context-doctor#74, move `vendor/agent-context-doctor` on this branch to the merge
-   commit, and let CI pass. Then review and merge this branch so the plugin marketplaces and
+1. Done: agent-context-doctor#74 is merged and `vendor/agent-context-doctor` is at its merge
+   commit `034a74c`. Let CI pass, then review and merge this branch so the plugin marketplaces and
    skills.sh can read it, and release the action (its `dist/` changes).
 2. Tag the integrations release `integrations-v0.1.0` (keep the action's `v1` tag where it is).
 3. Run the two manual client checks: `/agent-readiness:audit` in a logged-in Claude Code session,
