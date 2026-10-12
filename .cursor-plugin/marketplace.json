@@ -1,0 +1,15 @@
+{
+  "name": "agent-readiness",
+  "owner": {
+    "name": "Ali Pajand"
+  },
+  "metadata": {
+    "description": "Deterministic agent-readiness and agent-context audits for AI coding agents."
+  },
+  "plugins": [
+    {
+      "name": "agent-readiness",
+      "source": "./plugins/agent-readiness"
+    }
+  ]
+}

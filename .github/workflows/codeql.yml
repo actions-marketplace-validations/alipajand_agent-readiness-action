@@ -36,6 +36,8 @@ jobs:
               - dist
               - coverage
               - vendor
+              - integrations/mcp-package/dist
+              - plugins/agent-readiness/skills/agent-readiness-audit/scripts/agent-readiness.mjs
 
       - name: Analyze
         uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2

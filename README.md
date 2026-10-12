@@ -267,7 +267,10 @@ See [SECURITY.md](SECURITY.md) to report a vulnerability, and
 
 ## Release checklist
 
-Before tagging a release:
+A release has two separate steps: publishing an immutable version tag, and promoting it through the
+floating major tag. Workflows that use `@v1` change only at the second step.
+
+Publish the version:
 
 1. Run `git submodule update --init` so both engines under `vendor/` are present.
 2. Run `pnpm format:check`, `pnpm test`, and `pnpm typecheck`.
@@ -275,9 +278,37 @@ Before tagging a release:
 4. Commit the updated `dist/` if it changed. CI fails when `dist/` does not match the source.
 5. Set `version` in `package.json` and move the `Unreleased` notes in `CHANGELOG.md` under
    the new version.
-6. Tag the release commit with its full version (for example `v1.2.0`) and move the major tag to
-   it: `git tag -f v1 v1.2.0`, then push both tags (`git push -f origin v1`). Workflows that use
-   `@v1` pick up the release; pin a full commit SHA to review every change first.
+6. Tag the release commit on `main` with its full version (for example `v1.2.0`) and push only that
+   tag: `git tag -a v1.2.0 -m "agent-readiness-action 1.2.0"`, then `git push origin v1.2.0`. Never move or re-create a version tag.
+
+Promote it to `v1` only after it has passed a real consumer workflow:
+
+7. In a repository that uses the action, pin the new version's commit SHA on a branch and open a
+   draft pull request, keeping the workflow's inputs, permissions, and `baseline-ref`. Check that
+   the pull request run and the baseline comparison pass, and compare the scores, log, annotations,
+   and context findings with the previous version.
+8. Move the major tag to the tested commit: `git tag -f v1 v1.2.0^{}`, then
+   `git push -f origin v1`.
+9. Check that `v1` resolves to that commit: `git ls-remote origin refs/tags/v1` must print the
+   commit of `v1.2.0^{}`.
+
+Workflows that use `@v1` pick up a release at step 8; pin a full commit SHA to review every change
+first. The integrations (skill, plugin, MCP server) are versioned and tagged separately as
+`integrations-v<version>` ([docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md)); those tags never
+move or depend on the action's `v` tags.
+
+## Outside GitHub Actions
+
+The same pinned engines are packaged for local use by AI coding agents, read-only and offline:
+
+- **Agent Skill** `agent-readiness-audit` for Claude Code, Cursor, Codex, and other skill clients:
+  [docs/integrations/SKILL-USAGE.md](docs/integrations/SKILL-USAGE.md)
+- **Claude Code and Cursor plugin** `agent-readiness`:
+  [docs/integrations/PLUGINS.md](docs/integrations/PLUGINS.md)
+- **Local MCP server** `@alipajand/agent-readiness-mcp`:
+  [integrations/mcp-package/README.md](integrations/mcp-package/README.md)
+
+See [docs/distribution/README.md](docs/distribution/README.md) for what is published where.
 
 ## Related tools
 

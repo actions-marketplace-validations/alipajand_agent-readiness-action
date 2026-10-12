@@ -1,3 +1,6 @@
+packages:
+  - integrations
+
 overrides:
   esbuild: '0.28.1'
   rollup: '4.61.0'

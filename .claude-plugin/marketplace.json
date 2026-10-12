@@ -1,0 +1,24 @@
+{
+  "name": "agent-readiness",
+  "description": "Deterministic agent-readiness and agent-context audits for AI coding agents.",
+  "owner": {
+    "name": "Ali Pajand",
+    "url": "https://github.com/alipajand"
+  },
+  "plugins": [
+    {
+      "name": "agent-readiness",
+      "source": "./plugins/agent-readiness",
+      "description": "Score a repository's readiness for AI coding agents and check its agent instruction and configuration files. Read-only and offline.",
+      "category": "development",
+      "tags": [
+        "ai-coding-agents",
+        "agents-md",
+        "claude-md",
+        "cursor-rules",
+        "quality-gate",
+        "security-audit"
+      ]
+    }
+  ]
+}

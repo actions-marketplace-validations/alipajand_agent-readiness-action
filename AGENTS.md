@@ -10,16 +10,18 @@ Consumers run the committed `dist/index.js`, so `dist/` must always match the so
 
 ## Layout
 
-| Path                   | Role                                                                                             |
-| ---------------------- | ------------------------------------------------------------------------------------------------ |
-| `action.yml`           | Inputs, outputs, and the `node24` runtime                                                        |
-| `src/index.ts`         | Reads inputs, runs the audits, logs, comments, writes the job summary, sets outputs and failures |
-| `src/runArk.ts`        | Readiness audit and the confined Markdown report write                                           |
-| `src/runDoctor.ts`     | agent-context-doctor audit, honoring the audited repo's `.acdrc`                                 |
-| `src/baseline.ts`      | `baseline-ref` audit in a temporary git worktree                                                 |
-| `src/commentPr.ts`     | Create or update the PR comment                                                                  |
-| `src/formatSummary.ts` | Log and Markdown formatting (escapes all audited text)                                           |
-| `tests/*.spec.ts`      | Vitest tests                                                                                     |
+| Path                       | Role                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------ |
+| `action.yml`               | Inputs, outputs, and the `node24` runtime                                                        |
+| `src/index.ts`             | Reads inputs, runs the audits, logs, comments, writes the job summary, sets outputs and failures |
+| `src/runArk.ts`            | Readiness audit and the confined Markdown report write                                           |
+| `src/runDoctor.ts`         | agent-context-doctor audit, honoring the audited repo's `.acdrc`                                 |
+| `src/baseline.ts`          | `baseline-ref` audit in a temporary git worktree                                                 |
+| `src/commentPr.ts`         | Create or update the PR comment                                                                  |
+| `src/formatSummary.ts`     | Log and Markdown formatting (escapes all audited text)                                           |
+| `tests/*.spec.ts`          | Vitest tests                                                                                     |
+| `integrations/`            | Skill script, MCP server, and their tests (workspace package; see `docs/integrations/`)          |
+| `plugins/agent-readiness/` | Claude Code and Cursor plugin and the `agent-readiness-audit` skill (bundle is generated)        |
 
 ## Commands
 
@@ -30,6 +32,9 @@ pnpm format:check             # prettier (pnpm format to fix)
 pnpm typecheck
 pnpm test
 pnpm build                    # rebuilds dist/ — commit the result
+pnpm integrations:typecheck
+pnpm integrations:test
+pnpm integrations:build       # rebuilds the skill script and MCP bundle — commit the result
 ```
 
 Run `pnpm format:check`, `pnpm typecheck`, `pnpm test`, and `pnpm build` before finishing, and commit `dist/` whenever
@@ -43,6 +48,8 @@ source, dependencies, or a submodule changed. CI fails when `dist/` is stale.
 - Keep TypeScript below 7: ncc needs the TypeScript JS API.
 - Treat everything from the audited repository as untrusted: escape it in Markdown, log it with
   `logUntrusted`, and keep file writes inside `repo-path`.
+- The integrations call the engines' library functions, never their CLIs, and never write to the
+  audited repository. Do not add an option that writes files or reaches the network.
 
 ## Ask before changing
 
