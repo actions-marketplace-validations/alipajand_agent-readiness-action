@@ -14,6 +14,10 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
   - Local MCP server `@alipajand/agent-readiness-mcp` (`integrations/mcp-package/`, not yet published) with `audit_repository`, `audit_agent_context`, and `get_audit_report`.
   - CI job that rebuilds and checks the committed bundles and runs the integration tests on Node.js 22.13 and 24.
 
+### Security
+
+- Bundled engines moved to the latest `main`: agent-readiness-kit `b490a30` → `f15924b` (agent-readiness-kit#33) and agent-context-doctor `d70de51` → `03fa7f7` (agent-context-doctor#73). Both replace `fast-glob` with `tinyglobby`, so `braces` is no longer installed or compiled into `dist/` and the integration bundles. `braces` 3.0.3 has a stack-exhaustion advisory with no patched release (GHSA-vfj7-8cjw-p6xm). File discovery is unchanged: symlinked directories are still not walked, and the `.acdrc` brace limits still apply. The action's `fast-glob` dependency, which only supplied the engines, is replaced by `tinyglobby`.
+
 ## [1.1.0] - 2026-10-09
 
 ### Changed

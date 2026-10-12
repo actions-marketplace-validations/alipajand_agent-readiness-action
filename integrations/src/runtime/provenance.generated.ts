@@ -3,13 +3,13 @@ export const ENGINE_PROVENANCE = {
   "readiness": {
     "name": "agent-readiness-kit",
     "version": "1.0.0",
-    "commit": "b490a309974685a3c0dfe78c181e0545e152821f",
+    "commit": "f15924b31777ab33237a07a444816f202cc9447f",
     "repository": "https://github.com/alipajand/agent-readiness-kit"
   },
   "context": {
     "name": "agent-context-doctor",
     "version": "1.0.0",
-    "commit": "d70de511175027ed90637ecd90bb37b34244e430",
+    "commit": "03fa7f7f9c46aaa983f162977b4d81e2a2c4c541",
     "repository": "https://github.com/alipajand/agent-context-doctor"
   }
 } as const;

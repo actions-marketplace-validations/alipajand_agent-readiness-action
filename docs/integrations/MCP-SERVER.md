@@ -90,14 +90,11 @@ MCP client ──stdio──▶ server.js (SDK 2.2.0, McpServer + StdioServerTra
 
 ## Dependency audit
 
-`pnpm audit` after this work reports two advisories, both present before it:
+`pnpm audit` after this work reports one advisory, present before it:
 
-- `braces` 3.0.3 (high, stack exhaustion on deeply nested brace patterns), through `fast-glob`,
-  which the engines use and which is compiled into every bundle and the action's `dist/`. There is
-  no fixed `braces` release. The engines' upstream repositories have unpushed commits replacing
-  `fast-glob` with `tinyglobby`; moving the submodules to those commits once merged removes it.
-  Impact here is bounded: patterns come from the engines and from the audited repository's
-  `.acdrc`, and the MCP worker is killed at its time limit.
 - `nanoid` 3.3.17 (high) inside vite/vitest, used only by tests.
+
+The `braces` 3.0.3 advisory reported at review time (through `fast-glob`) is gone: both engines
+now use `tinyglobby`, and the submodules were moved to those commits.
 
 `ajv` (moderate, `$data` ReDoS) was raised to 8.18.0; it is a test-only dependency.

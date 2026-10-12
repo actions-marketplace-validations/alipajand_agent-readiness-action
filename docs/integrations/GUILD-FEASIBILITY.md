@@ -19,7 +19,7 @@ Sources: <https://docs.guild.ai/guide/sdk-introduction.md>, <https://docs.guild.
 - The compiled-agent rules forbid `Promise.all`/`race`, require serializable state across `await`,
   and cap state at 8 MiB per save.
 
-Both engines walk a local filesystem with `node:fs` and `fast-glob`. They cannot run in this
+Both engines walk a local filesystem with `node:fs` and `tinyglobby`. They cannot run in this
 sandbox, and porting them onto the GitHub contents API would be a reimplementation of the engines,
 which this project does not do.
 

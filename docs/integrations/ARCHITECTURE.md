@@ -32,7 +32,7 @@ The decisions below follow from inspecting the three repositories at these commi
    point: it reads `INPUT_*` variables, writes workflow commands, and calls the GitHub API. The
    integrations bundle the engines separately from the same submodules, so both artifacts always
    carry the same engine commits.
-5. **Both engines run on Node.js 22.12 or later** and use only `node:` built-ins plus `fast-glob`
+5. **Both engines run on Node.js 22.12 or later** and use only `node:` built-ins plus `tinyglobby`
    and `zod`, which bundle cleanly. The bundled runtime imports `node:fs`, `node:fs/promises`,
    `node:path`, `node:util`, `node:crypto`, and `node:module`, and nothing that opens a network
    connection or starts a process.
