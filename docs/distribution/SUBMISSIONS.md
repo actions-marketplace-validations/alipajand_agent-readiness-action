@@ -4,16 +4,16 @@ Owner-ready material for the remaining listings of Agent Readiness 0.1.2. Requir
 on 2026-10-12 against each destination's own pages, linked below. Nothing here has been submitted,
 and no listing exists yet on any of these four destinations (searched the same day).
 
-| Order | Destination                | Status      | Needs from the owner                                   | Blocker                                                                                               |
-| ----- | -------------------------- | ----------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| 1     | mcpserver.dev              | Ready       | Submit the public form                                 | None                                                                                                  |
-| 2     | Glama                      | Ready       | Glama account; may already appear via the MCP Registry | None                                                                                                  |
-| 3     | Anthropic plugin directory | **Ready**   | Paid claude.ai plan, GitHub connected, contact email   | None; the plugin README is released in 0.1.2                                                          |
-| 4     | Cursor Marketplace         | **Blocked** | Cursor installed and signed in; acceptance test        | Not tested in Cursor; the manifest, front matter, fail-closed, and README findings are fixed in 0.1.2 |
+| Order | Destination                | Status      | Needs from the owner                                   | Blocker                                                                      |
+| ----- | -------------------------- | ----------- | ------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| 1     | mcpserver.dev              | Ready       | Submit the public form                                 | None                                                                         |
+| 2     | Glama                      | Ready       | Glama account; may already appear via the MCP Registry | None                                                                         |
+| 3     | Anthropic plugin directory | **Ready**   | Paid claude.ai plan, GitHub connected, contact email   | None; the plugin README is released in 0.1.2                                 |
+| 4     | Cursor Marketplace         | **Blocked** | Decide on the untested denial step, then submit        | Acceptance test passed in Cursor except step 6 (denial), which could not run |
 
 The plugin fixes for blockers 3 and 4 are released in integrations 0.1.2 (tag
 `integrations-v0.1.2`, npm and MCP Registry 0.1.2). What remains is the owner's Anthropic
-submission and the Cursor acceptance test.
+submission and a decision on the untested Cursor denial step.
 
 ## Disclosures every listing carries
 
@@ -265,12 +265,30 @@ Cursor Marketplace stays **NOT TESTED**. Step 9 was not run (no network).
 
 In Cursor, step 5 passes only if the answer gives these values.
 
+### Cursor run (2026-10-13)
+
+Signed-in Cursor 3.24.12 on macOS, Node.js 24.11.0, with the plugin exported from tag
+`integrations-v0.1.2` and copied (no symlinks) to `~/.cursor/plugins/local/agent-readiness`. The
+fixture was built as in step 3. The Cursor Marketplace is **NEEDS WORK**: everything passed except
+step 6, which is untested.
+
+| Step                  | Result                                                                                                                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1, 3, 4 (reference)   | Pass: version 0.1.2, readiness 20, context 53 `needs-work`, 5 issues, commits `f15924b` and `034a74c`, the same as the headless pre-check                                                              |
+| 2 (loads)             | Pass: **Customize** lists the **Agent Readiness** plugin (Local) and the `agent-readiness-audit` skill, enabled, with no manifest error; `/agent-readiness-audit` is offered as a command              |
+| 5 (allowed run)       | Pass: Cursor ran `node …/agent-readiness.mjs audit` without asking. The answer gave readiness 20, context 53 `needs-work`, five issues (1 high, 3 medium, 1 low), both full commits, and version 0.1.2 |
+| 6 (denied run)        | **Not tested.** Cursor did not ask before running the command, so there was nothing to deny. The fail-closed rule is present in the released Cursor command but was not exercised                      |
+| 7 (masking in answer) | Pass for the step 5 answer: the token appeared only as `ghp_************`. There is no step 6 answer                                                                                                   |
+| 8 (fixture unchanged) | Pass: `git status --porcelain` printed nothing and the fixture still had its one commit                                                                                                                |
+| 9 (MCP in Cursor)     | Not run                                                                                                                                                                                                |
+
 ## Owner actions, in order
 
 1. mcpserver.dev: submit the form above. No account needed to open it.
 2. Glama: search for `io.github.alipajand/agent-readiness`. If absent, sign in and **Add Server**.
 3. Done: the coordinated 0.1.2 release (tag, GitHub release, npm, MCP Registry).
 4. Anthropic: in the portal, **Validate** the tag, answer data handling and compliance, submit.
-5. Install Cursor, run the acceptance checklist on the released 0.1.2, then submit at
-   <https://cursor.com/marketplace/publish> only if every step passes.
+5. Cursor: the acceptance checklist passed on 0.1.2 except step 6 (denial), which is untested.
+   Rerun step 6 with command approval on in Cursor, or submit at
+   <https://cursor.com/marketplace/publish> with that gap stated.
 6. After each listing appears, open a documentation PR updating `docs/PUBLISHING-MATRIX.md`.
