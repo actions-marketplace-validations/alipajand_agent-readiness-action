@@ -89,7 +89,7 @@ or the skill by name ran the script directly.
 
 ## 4. Publish (owner only)
 
-- [ ] Merge to `main`, tag `integrations-v<version>`, push the tag, and create its GitHub release
+- [x] Merge to `main`, tag `integrations-v<version>`, push the tag, and create its GitHub release
       (not marked Latest, so the action's release stays Latest) from
       `docs/integrations/RELEASE-NOTES.md`
 - [ ] `npm publish` from `integrations/mcp-package` with 2FA. The package does not request npm

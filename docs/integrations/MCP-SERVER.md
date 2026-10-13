@@ -52,7 +52,7 @@ MCP client ──stdio──▶ server.js (SDK 2.2.0, McpServer + StdioServerTra
 
 ## Test results
 
-`pnpm integrations:test`: 16 files, 112 tests passing (2026-10-12). The MCP-specific tests are:
+`pnpm integrations:test`: 16 files, 117 tests passing at `integrations-v0.1.1` (2026-10-12). The MCP-specific tests are:
 
 | Area               | Test                                                                                                                                                             | Result                          |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
