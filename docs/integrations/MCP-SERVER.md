@@ -83,12 +83,12 @@ MCP client ──stdio──▶ server.js (SDK 2.2.0, McpServer + StdioServerTra
 
 ## Packaging and registry status
 
-| Item                                      | Status                                                                                                                                                                                         |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| npm name `@alipajand/agent-readiness-mcp` | Not taken on npm; the `@alipajand` scope belongs to the owner's npm account                                                                                                                    |
-| Dependencies                              | None at run time; `@modelcontextprotocol/server` 2.2.0 and `zod` 4.6.5 are compiled in (2.2.0 chosen as the newest release at least two weeks old; 2.3.x only changes HTTP auth and redirects) |
-| `server.json`                             | Valid: `mcp-publisher validate` (1.8.1, checksum verified) reported `✅ server.json is valid` against `registry.modelcontextprotocol.io`                                                       |
-| Publication                               | Not done. Requires `npm publish` by the owner, then `mcp-publisher login github` and `mcp-publisher publish`                                                                                   |
+| Item                                      | Status                                                                                                                                                                                                                                                   |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| npm name `@alipajand/agent-readiness-mcp` | Published: [0.1.1 on npm](https://www.npmjs.com/package/@alipajand/agent-readiness-mcp), byte-identical to the `integrations-v0.1.1` build                                                                                                               |
+| Dependencies                              | None at run time; `@modelcontextprotocol/server` 2.2.0 and `zod` 4.6.5 are compiled in (2.2.0 chosen as the newest release at least two weeks old; 2.3.x only changes HTTP auth and redirects)                                                           |
+| `server.json`                             | Valid: `mcp-publisher validate` (1.8.1, checksum verified) reported `✅ server.json is valid` against `registry.modelcontextprotocol.io`                                                                                                                 |
+| Publication                               | Done: npm `@alipajand/agent-readiness-mcp` 0.1.1 and MCP Registry `io.github.alipajand/agent-readiness` 0.1.1 ([entry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.alipajand/agent-readiness)), both 2026-10-12/13 by the owner |
 
 ## Dependency audit
 

@@ -96,9 +96,10 @@ or the skill by name ran the script directly.
       provenance: npm only generates it from a supported CI provider, and no workflow here
       publishes. To publish with provenance, add a workflow with `id-token: write` that runs
       `npm publish --provenance` (or npm trusted publishing) from this repository
-- [ ] `mcp-publisher login github` as `alipajand` (the `io.github.alipajand/*` namespace), then
+- [x] `mcp-publisher login github` as `alipajand` (the `io.github.alipajand/*` namespace), then
       `mcp-publisher publish` from `integrations/mcp-package`. The registry checks that the
       published npm package's `mcpName` equals `server.json`'s `name`, so publish npm first
+      (0.1.1 published 2026-10-13; [registry entry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.alipajand/agent-readiness))
 - [ ] Release the action separately (README, "Release checklist"): this branch changes `dist/` through the
       engine updates, so it needs a new action version, not only an integrations tag
 - [ ] Cursor Marketplace: submit or update at <https://cursor.com/marketplace/publish>, only after
