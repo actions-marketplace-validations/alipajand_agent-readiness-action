@@ -4,15 +4,16 @@ Owner-ready material for the remaining listings of Agent Readiness 0.1.1. Requir
 on 2026-10-12 against each destination's own pages, linked below. Nothing here has been submitted,
 and no listing exists yet on any of these four destinations (searched the same day).
 
-| Order | Destination                | Status                | Needs from the owner                                   | Blocker                                                   |
-| ----- | -------------------------- | --------------------- | ------------------------------------------------------ | --------------------------------------------------------- |
-| 1     | mcpserver.dev              | Ready                 | Submit the public form                                 | None                                                      |
-| 2     | Glama                      | Ready                 | Glama account; may already appear via the MCP Registry | None                                                      |
-| 3     | Anthropic plugin directory | **Blocked** (one fix) | Paid claude.ai plan, GitHub connected, contact email   | Plugin folder has no `README.md` (validation blocks)      |
-| 4     | Cursor Marketplace         | **Blocked**           | Cursor installed and signed in; acceptance test        | Not tested in Cursor; three manifest and content findings |
+| Order | Destination                | Status                | Needs from the owner                                   | Blocker                                                                                                       |
+| ----- | -------------------------- | --------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| 1     | mcpserver.dev              | Ready                 | Submit the public form                                 | None                                                                                                          |
+| 2     | Glama                      | Ready                 | Glama account; may already appear via the MCP Registry | None                                                                                                          |
+| 3     | Anthropic plugin directory | **Blocked** (one fix) | Paid claude.ai plan, GitHub connected, contact email   | Plugin folder has no `README.md` (validation blocks)                                                          |
+| 4     | Cursor Marketplace         | **Blocked**           | Cursor installed and signed in; acceptance test        | Not tested in Cursor; four manifest and content findings, including no fail-closed rule in the Cursor command |
 
-Blockers 3 and 4 need changes inside `plugins/agent-readiness/`, which ships in the plugin, so they
-belong in a 0.1.2 plugin release, not in this documentation change. See "Fixes for 0.1.2".
+Blockers 3 and 4 need changes inside `plugins/agent-readiness/`, which ships in the plugin. They
+belong in a coordinated integrations 0.1.2 release, not in this documentation change. See "Fixes for
+0.1.2".
 
 ## Disclosures every listing carries
 
@@ -115,14 +116,37 @@ Team, or Enterprise plan, and a GitHub account connected on claude.ai with push 
 repository. The listing name and short description come from `plugin.json`; the README in the
 plugin folder becomes the listing description.
 
-| Step          | Enter                                                                                                                                                     |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repository    | `alipajand/agent-readiness-action`                                                                                                                        |
-| Plugin path   | `plugins/agent-readiness`                                                                                                                                 |
-| Branch or tag | The release tag that contains the fixes (for example `integrations-v0.1.2`); change it in **Settings** for each release                                   |
-| Data handling | Reads files in the chosen repository on the user's machine; stores nothing; sends nothing to any service; keeps no data; not intended for people under 18 |
-| Compliance    | Owner's contact email; the four acknowledgements                                                                                                          |
-| New versions  | **Scheduled check only** when tracking a tag (the webhook needs repository admin)                                                                         |
+| Step          | Enter                                                                                                                                    |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository    | `alipajand/agent-readiness-action`                                                                                                       |
+| Plugin path   | `plugins/agent-readiness`                                                                                                                |
+| Branch or tag | The release tag that contains the fixes (for example `integrations-v0.1.2`); change it in **Settings** for each release                  |
+| Data handling | See "Data handling answers" below. Answer for the plugin's own behavior, and do not state that the whole workflow sends nothing anywhere |
+| Compliance    | Owner's contact email; the four acknowledgements                                                                                         |
+| New versions  | **Scheduled check only** when tracking a tag (the webhook needs repository admin)                                                        |
+
+### Data handling answers
+
+The portal asks whether the plugin reads or stores personal data, whether it sends data to services
+other than its declared connectors, how long it keeps data, and whether it is meant for people under 18. Keep three things apart in every answer:
+
+- **The scanner** (the bundled script the plugin runs): local, read-only, offline. It reads files in
+  the repository the user names, which may contain personal data, stores nothing, writes nothing,
+  and makes no network requests. The plugin declares no connectors or MCP servers.
+- **The AI client** (Claude, which runs the plugin): it reads the audit results, and may read
+  repository files directly, and sends them to its model provider under Anthropic's own policies.
+  The plugin does not control or reduce that.
+- **Credential masking**: pattern-based, applied only to the scanner's output. Files Claude reads
+  directly are not masked, and unrecognised credential formats are not masked.
+
+Suggested answers:
+
+| Question                         | Answer                                                                                                                                                                                         |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reads personal data?             | The scanner reads repository files chosen by the user, locally; they can contain personal data. The plugin collects no personal data for itself                                                |
+| Stores personal data / retention | The scanner stores nothing and keeps nothing after it exits. Claude's own retention applies to the conversation                                                                                |
+| Sends data to other services?    | The scanner sends nothing; the plugin has no connectors and no network calls. Audit results and any files Claude reads reach Anthropic as part of the conversation, under Anthropic's policies |
+| Intended for people under 18?    | No                                                                                                                                                                                             |
 
 Validation findings to expect:
 
@@ -133,8 +157,9 @@ Validation findings to expect:
 | Name `agent-readiness` near other "Agent Readiness" tools           | Possibly held       | None; the description says what it audits                                    |
 
 Surfaces: the directory derives them from the components. Commands and skills load in Chat, Cowork,
-and Claude Code, but the audit needs Node.js and a shell, which only Claude Code (and Cowork on the
-user's computer, untested) provide. Elsewhere the skill reports that the audit did not run.
+and Claude Code, but the audit needs Node.js and a shell. Only Claude Code was tested. The skill tells
+the model to say the audit did not run when the script cannot run; that was verified in Claude Code
+with the shell blocked, not in Chat or Cowork.
 
 ## 4. Cursor Marketplace
 
@@ -147,28 +172,47 @@ visible without signing in. Cursor's own review checklist
 and its [`plugin.schema.json`](https://github.com/cursor/plugins/blob/main/schemas/plugin.schema.json)
 were checked against the 0.1.1 plugin:
 
-| Finding                                                                                                | Fix in 0.1.2                                 |
-| ------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
-| `.cursor-plugin/plugin.json` fails Cursor's schema: `author.url` is not allowed (only `name`, `email`) | Remove `author.url` from the Cursor manifest |
-| `cursor-commands/agent-readiness-audit.md` has no `name`/`description` front matter                    | Add front matter                             |
-| No `README.md` in the plugin folder                                                                    | Same README as for Anthropic                 |
-| Not loaded in Cursor                                                                                   | Cursor acceptance test below                 |
+| Finding                                                                                                                                                                                                                                                               | Fix in 0.1.2                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `.cursor-plugin/plugin.json` fails Cursor's schema: `author.url` is not allowed (only `name`, `email`)                                                                                                                                                                | Remove `author.url` from the Cursor manifest   |
+| `cursor-commands/agent-readiness-audit.md` has no `name`/`description` front matter                                                                                                                                                                                   | Add front matter                               |
+| No `README.md` in the plugin folder                                                                                                                                                                                                                                   | Same README as for Anthropic                   |
+| The Cursor command has no fail-closed instruction of its own. It hands off to the skill, whose `SKILL.md` says to report that the audit did not run, give no scores, and not read the files instead; whether Cursor loads the skill and follows that rule is untested | Add the same rule to the Cursor command itself |
+| Not loaded in Cursor                                                                                                                                                                                                                                                  | Cursor acceptance test below                   |
 
 `.cursor-plugin/marketplace.json` passes Cursor's marketplace schema.
 
 ## Fixes for 0.1.2
 
-All three are plugin content, so they ship as a plugin version bump (0.1.2, with the version tests),
-a new `integrations-v0.1.2` tag, and no change to the MCP package:
+The integration tests require one version across the runtime (`TOOL_VERSION`), the skill metadata,
+both plugin manifests, the integrations package, the MCP npm package, and both versions in
+`server.json`. So 0.1.2 is a coordinated release of every integration, even though the MCP server's
+behavior does not change:
 
 1. `plugins/agent-readiness/README.md`: purpose, installation (Claude Code and Cursor), components
    (one command, one skill, the bundled script), the disclosures above, and that the script is the
    compiled engines from pinned commits.
 2. `plugins/agent-readiness/.cursor-plugin/plugin.json`: drop `author.url`.
 3. `plugins/agent-readiness/cursor-commands/agent-readiness-audit.md`: add front matter with `name`
-   and `description`.
+   and `description`, and a fail-closed rule: if the command is denied or fails before printing a
+   report, say the audit did not run and why, give no scores or findings, and do not inspect the
+   files instead. Add a test for it, as `plugins.spec.ts` does for the Claude Code command.
+4. Every integration version to 0.1.2, bundles rebuilt, install docs updated; the version tests
+   must pass.
+5. Merge, tag `integrations-v0.1.2`, GitHub release (not Latest). Then `npm publish` 0.1.2 from the
+   tag and `mcp-publisher publish` with the 0.1.2 `server.json`, because npm and the MCP Registry
+   carry the same version. The action's version and tags do not change.
 
-Then re-run `claude plugin validate --strict`, the Cursor schema check, and the integration tests.
+Then re-run `claude plugin validate --strict`, the Cursor schema check, the integration tests, and
+the reproducibility checks.
+
+### Possible later change: separate versions (not proposed for 0.1.2)
+
+A plugin fix currently forces an npm and MCP Registry release with no server change. A later design
+could give the MCP package its own version line: the version tests would check the plugin, skill, and
+runtime together and the npm package and `server.json` together, the MCP server would report its own
+version, and tags would split into `plugin-v*` and `mcp-v*`. That changes the release process and
+the tests, so it needs its own review.
 
 ## Cursor acceptance checklist (v0.1.1 artifacts)
 
@@ -192,7 +236,8 @@ Run on a machine with Cursor installed and signed in. Record each result in
    Cursor; the answer depends on your Cursor settings). After you allow it, pass: the answer gives
    exactly the scores, grade, issue count, and commits from step 4.
 6. Run it again and deny the command. Pass: the answer says the audit did not run, gives no scores,
-   and does not read the files instead.
+   and does not read the files instead. In 0.1.1 this depends on Cursor loading the skill, whose
+   `SKILL.md` carries the rule; the Cursor command itself gains the rule in 0.1.2.
 7. Pass: neither answer contains `Ab3dEf6hIj9kLm2nOp5q` (masked as `ghp_****…`).
 8. Pass: `git -C <fixture> status --porcelain` prints nothing.
 9. Optional, MCP in Cursor: add
@@ -204,8 +249,9 @@ Run on a machine with Cursor installed and signed in. Record each result in
 
 1. mcpserver.dev: submit the form above. No account needed to open it.
 2. Glama: search for `io.github.alipajand/agent-readiness`. If absent, sign in and **Add Server**.
-3. Approve the 0.1.2 plugin fixes (README, Cursor manifest, Cursor command front matter), merge, and
-   tag `integrations-v0.1.2`.
+3. Approve the coordinated 0.1.2 release (README, Cursor manifest, Cursor command front matter and
+   fail-closed rule, all versions to 0.1.2), merge, tag `integrations-v0.1.2`, then publish npm
+   0.1.2 and the MCP Registry 0.1.2.
 4. Anthropic: in the portal, **Validate** the tag, answer data handling and compliance, submit.
 5. Install Cursor, run the acceptance checklist on 0.1.2, then submit at
    <https://cursor.com/marketplace/publish> only if every step passes.
