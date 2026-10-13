@@ -65,9 +65,11 @@ claude plugin validate .
 
 ## Cursor
 
-**Not tested in Cursor yet.** The manifests follow Cursor's plugin reference and are checked by
-`plugins.spec.ts`, but the plugin has not been loaded in Cursor, so it is not submitted to the
-Cursor Marketplace.
+**Tested in Cursor.** The manifests follow Cursor's plugin reference and are checked by
+`plugins.spec.ts`. Signed-in Cursor 3.24.12 loaded the 0.1.2 plugin and ran the audit correctly,
+and with command approval required, a denied run said the audit did not run without giving scores
+or reading the files. It is ready to submit to the Cursor Marketplace; the MCP server in Cursor was
+not tested.
 
 ### Install
 
@@ -103,7 +105,7 @@ hands off to the skill, which locates its own script.
 | Read-only scans (`tests/readOnly.spec.ts`, `tests/install.spec.ts` with writes denied)                              | Passing                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Missing prerequisite: Node.js older than 22.12                                                                      | The script prints `agent-readiness needs Node.js 22.12 or later; this is Node.js <version>.` and exits 1                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Live session (Claude Code 2.1.278, signed in, headless) expanding `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_SKILL_DIR}` | Passed on 2026-10-12. `/agent-readiness:audit` (with a path and without one) and `/agent-readiness:agent-readiness-audit` each ran the bundled script once with the variable expanded, with no permission denial, and reported the engines' scores (readiness 31, context 0 risky, 27 issues on the credential fixture). Two defects found in the first run are fixed in this release: the command sent the model to the `Skill` tool, which was denied, and the skill showed only a `<skill-dir>` placeholder, so the model quoted the script path and the call was denied |
-| Cursor load from `~/.cursor/plugins/local/`                                                                         | **Not tested**: Cursor is not installed on the build machine. On the release checklist                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Cursor load from `~/.cursor/plugins/local/`                                                                         | **Tested** (Cursor 3.24.12, 2026-10-13): the plugin loads, `/agent-readiness-audit` matches the script, masking holds, the repository is unchanged, and a denied command makes it report that the audit did not run. On the release checklist                                                                                                                                                                                                                                                                                                                               |
 
 ## Marketplace metadata
 

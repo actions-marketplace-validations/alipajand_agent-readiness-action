@@ -17,7 +17,7 @@ skill, the Claude Code and Cursor plugin, and the MCP server. Integration releas
       checks passed on `0b4cc20`, including CodeQL
 - [x] The Claude Code checks in § 3 pass (plugin, skill, marketplace install, MCP host). This gates
       the skill, the Claude Code plugin, npm, and the MCP Registry
-- [ ] The Cursor check in § 3 passes. This gates the Cursor Marketplace submission only
+- [x] The Cursor check in § 3 passes. This gates the Cursor Marketplace submission only
 
 ## 1. Versions
 
@@ -75,10 +75,14 @@ fixture repositories; evidence in `RELEASE-READINESS.md`):
 - [x] One MCP host (Claude Code): add the server with `--root`, call `audit_repository`,
       `audit_agent_context`, and `get_audit_report`, and confirm the host shows no sandbox or
       startup error
-- [ ] Cursor: copy `plugins/agent-readiness` to `~/.cursor/plugins/local/agent-readiness`, reload,
+- [x] Cursor: copy `plugins/agent-readiness` to `~/.cursor/plugins/local/agent-readiness`, reload,
       run the `agent-readiness-audit` command on a sample repository, and confirm it reports the
       same scores as `node plugins/agent-readiness/skills/agent-readiness-audit/scripts/agent-readiness.mjs audit <repo>`.
-      **Not tested**: Cursor is not installed on the build machine
+      **Passed** (2026-10-13, signed-in Cursor 3.24.12 on macOS, released 0.1.2): loading, the
+      allowed run with approval (same scores as the script), masking, an unchanged repository, and
+      the denied run (the answer said the audit did not run, gave no scores, and read no repository
+      file; acceptance steps 1 to 8 in `distribution/SUBMISSIONS.md`). Cursor does not log
+      approvals, so those are owner-reported. The MCP server in Cursor was not run
 - [ ] Windows, if it is to be listed as supported: run the skill script and the MCP server once.
       **Not tested**: no Windows machine or CI job
 
@@ -105,8 +109,9 @@ or the skill by name ran the script directly.
       cache can lag, and a refused publish registers nothing
 - [x] Release the action separately (README, "Release checklist") when `dist/` changes: done as
       v1.2.0 for the engine updates; integrations 0.1.2 did not change `dist/`
-- [ ] Cursor Marketplace: submit or update at <https://cursor.com/marketplace/publish>, only after
-      the Cursor check in § 3 passes
+- [x] Cursor Marketplace: submit or update at <https://cursor.com/marketplace/publish>, the Cursor
+      check in § 3 has passed (2026-10-13). Submitted 2026-10-13; awaiting Cursor's review, not
+      listed yet
 - [ ] Update statuses and evidence in `docs/PUBLISHING-MATRIX.md`
 
 ## Engine bumps
