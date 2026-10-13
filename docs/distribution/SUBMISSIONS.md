@@ -1,20 +1,19 @@
 # Directory submissions
 
-Owner-ready material for the remaining listings of Agent Readiness 0.1.1. Requirements were checked
+Owner-ready material for the remaining listings of Agent Readiness 0.1.2. Requirements were checked
 on 2026-10-12 against each destination's own pages, linked below. Nothing here has been submitted,
 and no listing exists yet on any of these four destinations (searched the same day).
 
-| Order | Destination                | Status                | Needs from the owner                                   | Blocker                                                                                                       |
-| ----- | -------------------------- | --------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| 1     | mcpserver.dev              | Ready                 | Submit the public form                                 | None                                                                                                          |
-| 2     | Glama                      | Ready                 | Glama account; may already appear via the MCP Registry | None                                                                                                          |
-| 3     | Anthropic plugin directory | **Blocked** (one fix) | Paid claude.ai plan, GitHub connected, contact email   | Plugin folder has no `README.md` (validation blocks)                                                          |
-| 4     | Cursor Marketplace         | **Blocked**           | Cursor installed and signed in; acceptance test        | Not tested in Cursor; four manifest and content findings, including no fail-closed rule in the Cursor command |
+| Order | Destination                | Status      | Needs from the owner                                   | Blocker                                                                                               |
+| ----- | -------------------------- | ----------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| 1     | mcpserver.dev              | Ready       | Submit the public form                                 | None                                                                                                  |
+| 2     | Glama                      | Ready       | Glama account; may already appear via the MCP Registry | None                                                                                                  |
+| 3     | Anthropic plugin directory | **Ready**   | Paid claude.ai plan, GitHub connected, contact email   | None; the plugin README is released in 0.1.2                                                          |
+| 4     | Cursor Marketplace         | **Blocked** | Cursor installed and signed in; acceptance test        | Not tested in Cursor; the manifest, front matter, fail-closed, and README findings are fixed in 0.1.2 |
 
-Blockers 3 and 4 need changes inside `plugins/agent-readiness/`. They are fixed on the
-`ali/integrations-0.1.2` branch for the coordinated integrations 0.1.2 release, which is not yet
-merged, tagged, or published. Until it is, every link and install command below still refers to
-0.1.1, which stays available.
+The plugin fixes for blockers 3 and 4 are released in integrations 0.1.2 (tag
+`integrations-v0.1.2`, npm and MCP Registry 0.1.2). What remains is the owner's Anthropic
+submission and the Cursor acceptance test.
 
 ## Disclosures every listing carries
 
@@ -43,7 +42,7 @@ Use these sentences, or a shorter faithful version, in each listing:
 | Repository            | https://github.com/alipajand/agent-readiness-action                                                            |
 | MCP package subfolder | https://github.com/alipajand/agent-readiness-action/tree/main/integrations/mcp-package                         |
 | License               | MIT                                                                                                            |
-| Release               | https://github.com/alipajand/agent-readiness-action/releases/tag/integrations-v0.1.1                           |
+| Release               | https://github.com/alipajand/agent-readiness-action/releases/tag/integrations-v0.1.2                           |
 | Logo                  | `plugins/agent-readiness/assets/logo.svg`; 512×512 PNG at `docs/distribution/assets/logo-512.png`              |
 | Keywords              | ai-coding-agents, agent-readiness, agents-md, claude-md, cursor-rules, mcp, security-audit, developer-tools    |
 | Category              | Developer Tools (secondary: Security)                                                                          |
@@ -80,7 +79,7 @@ repository or page, reviewed before listing. No account was required to open it.
 | ----------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Repository or page URL        | Yes      | https://github.com/alipajand/agent-readiness-action/tree/main/integrations/mcp-package                                                                                                 |
 | Name                          | Yes      | Agent Readiness                                                                                                                                                                        |
-| What does your MCP server do? | Yes      | Full description above, plus: Install: `npx -y @alipajand/agent-readiness-mcp@0.1.1 --root /path/to/projects` (stdio). Tools: audit_repository, audit_agent_context, get_audit_report. |
+| What does your MCP server do? | Yes      | Full description above, plus: Install: `npx -y @alipajand/agent-readiness-mcp@0.1.2 --root /path/to/projects` (stdio). Tools: audit_repository, audit_agent_context, get_audit_report. |
 | Image (PNG, JPEG, or WebP)    | No       | `docs/distribution/assets/logo-512.png`                                                                                                                                                |
 | Category                      | No       | Developer Tools                                                                                                                                                                        |
 | Tags                          | No       | mcp server, code quality, security, ai coding agents, agents-md                                                                                                                        |
@@ -93,7 +92,7 @@ Process ([FAQ](https://glama.ai/mcp/faq)): **Add Server** at <https://glama.ai/m
 requires a Glama account (GitHub or email sign-up), then the GitHub repository URL, a display name,
 and a short description. Glama then indexes it, with license detection, a security scan, and a
 health test. Glama states that it imports the official MCP Registry, where
-`io.github.alipajand/agent-readiness` 0.1.1 is published, so check for an existing listing before
+`io.github.alipajand/agent-readiness` 0.1.2 is published, so check for an existing listing before
 adding one to avoid a duplicate.
 
 | Field             | Enter                                               |
@@ -183,7 +182,7 @@ were checked against the 0.1.1 plugin:
 
 `.cursor-plugin/marketplace.json` passes Cursor's marketplace schema.
 
-## Fixes for 0.1.2 (done on the release branch, not yet released)
+## Fixes in 0.1.2 (released 2026-10-13)
 
 The integration tests require one version across the runtime (`TOOL_VERSION`), the skill metadata,
 both plugin manifests, the integrations package, the MCP npm package, and both versions in
@@ -217,13 +216,11 @@ the tests, so it needs its own review.
 
 ## Cursor acceptance checklist
 
-Run on a machine with Cursor installed and signed in, on the 0.1.2 release once it is tagged
-(replace `integrations-v0.1.1` with `integrations-v0.1.2` and 0.1.1 with 0.1.2 below); the 0.1.1
-artifacts can be used for a first look. Record each result in
-`docs/PUBLISHING-MATRIX.md`. Run it again on 0.1.2 before submitting.
+Run on a machine with Cursor installed and signed in, on the released 0.1.2 artifacts. Record each
+result in `docs/PUBLISHING-MATRIX.md`.
 
 1. Export the released plugin and a fixture:
-   `D=$(mktemp -d) && git -C ~/Projects/agent-readiness-action archive integrations-v0.1.1 plugins/agent-readiness | tar -x -C "$D"`
+   `D=$(mktemp -d) && git -C ~/Projects/agent-readiness-action archive integrations-v0.1.2 plugins/agent-readiness | tar -x -C "$D"`
 2. Copy it (not a symlink): `cp -R "$D/plugins/agent-readiness" ~/.cursor/plugins/local/agent-readiness`.
    Run **Developer: Reload Window**. Pass: **Customize** lists the `agent-readiness-audit` skill
    and command, with no manifest error.
@@ -233,18 +230,18 @@ artifacts can be used for a first look. Record each result in
 4. Reference scores from the bundled engines:
    `node ~/.cursor/plugins/local/agent-readiness/skills/agent-readiness-audit/scripts/agent-readiness.mjs audit <fixture> --format json`.
    Note `readiness.result.score`, `context.result.report.score.total`, `grade`, and
-   `summary.issueCount`, and that `version` reports 0.1.1 with commits `f15924b` and `034a74c`.
+   `summary.issueCount`, and that `version` reports 0.1.2 with commits `f15924b` and `034a74c`.
 5. In Cursor, open the fixture and run the `agent-readiness-audit` command. Record whether Cursor
    asks before running `node …/agent-readiness.mjs audit` (the plugin cannot pre-approve commands in
    Cursor; the answer depends on your Cursor settings). After you allow it, pass: the answer gives
    exactly the scores, grade, issue count, and commits from step 4.
 6. Run it again and deny the command. Pass: the answer says the audit did not run, gives no scores,
-   and does not read the files instead. In 0.1.1 this depends on Cursor loading the skill, whose
-   `SKILL.md` carries the rule; the Cursor command itself gains the rule in 0.1.2.
+   does not claim success, and does not read the files instead (the Cursor command carries this
+   rule itself since 0.1.2).
 7. Pass: neither answer contains `Ab3dEf6hIj9kLm2nOp5q` (masked as `ghp_****…`).
 8. Pass: `git -C <fixture> status --porcelain` prints nothing.
 9. Optional, MCP in Cursor: add
-   `{"mcpServers":{"agent-readiness":{"command":"npx","args":["-y","@alipajand/agent-readiness-mcp@0.1.1","--root","<fixture parent>"]}}}`
+   `{"mcpServers":{"agent-readiness":{"command":"npx","args":["-y","@alipajand/agent-readiness-mcp@0.1.2","--root","<fixture parent>"]}}}`
    to `~/.cursor/mcp.json`, call `audit_repository` and `audit_agent_context` on the fixture, and
    compare with step 4.
 
@@ -252,10 +249,8 @@ artifacts can be used for a first look. Record each result in
 
 1. mcpserver.dev: submit the form above. No account needed to open it.
 2. Glama: search for `io.github.alipajand/agent-readiness`. If absent, sign in and **Add Server**.
-3. Approve the coordinated 0.1.2 release (README, Cursor manifest, Cursor command front matter and
-   fail-closed rule, all versions to 0.1.2), merge, tag `integrations-v0.1.2`, then publish npm
-   0.1.2 and the MCP Registry 0.1.2.
+3. Done: the coordinated 0.1.2 release (tag, GitHub release, npm, MCP Registry).
 4. Anthropic: in the portal, **Validate** the tag, answer data handling and compliance, submit.
-5. Install Cursor, run the acceptance checklist on 0.1.2, then submit at
+5. Install Cursor, run the acceptance checklist on the released 0.1.2, then submit at
    <https://cursor.com/marketplace/publish> only if every step passes.
 6. After each listing appears, open a documentation PR updating `docs/PUBLISHING-MATRIX.md`.

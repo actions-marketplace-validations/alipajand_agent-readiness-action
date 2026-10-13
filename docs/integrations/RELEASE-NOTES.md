@@ -3,7 +3,11 @@
 The skill, the Claude Code and Cursor plugin, and the MCP server are released together under
 `integrations-v<version>` tags. Those tags are independent of the GitHub Action's `v` tags.
 
-## 0.1.2 (unreleased)
+## 0.1.2 (2026-10-13)
+
+Tag `integrations-v0.1.2` (merge commit `8608f7e`); [GitHub release](https://github.com/alipajand/agent-readiness-action/releases/tag/integrations-v0.1.2). The MCP package is on npm
+as [`@alipajand/agent-readiness-mcp@0.1.2`](https://www.npmjs.com/package/@alipajand/agent-readiness-mcp) (SHA-256 `4daba9c0f50fb3d2a6cc5c7939dbe68285fb7380d3e90c3f4a0e14d5966f901a`, byte-identical to the tag build)
+and listed in the [MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.alipajand/agent-readiness) as `io.github.alipajand/agent-readiness` 0.1.2.
 
 A coordinated release of every integration, for directory compatibility. The audit engines, their
 commits (agent-readiness-kit `f15924b`, agent-context-doctor `034a74c`), scoring, and the MCP
