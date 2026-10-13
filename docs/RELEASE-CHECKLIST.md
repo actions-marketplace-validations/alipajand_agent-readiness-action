@@ -109,8 +109,9 @@ or the skill by name ran the script directly.
       cache can lag, and a refused publish registers nothing
 - [x] Release the action separately (README, "Release checklist") when `dist/` changes: done as
       v1.2.0 for the engine updates; integrations 0.1.2 did not change `dist/`
-- [ ] Cursor Marketplace: submit or update at <https://cursor.com/marketplace/publish>, the Cursor
-      check in § 3 has passed (2026-10-13)
+- [x] Cursor Marketplace: submit or update at <https://cursor.com/marketplace/publish>, the Cursor
+      check in § 3 has passed (2026-10-13). Submitted 2026-10-13; awaiting Cursor's review, not
+      listed yet
 - [ ] Update statuses and evidence in `docs/PUBLISHING-MATRIX.md`
 
 ## Engine bumps
