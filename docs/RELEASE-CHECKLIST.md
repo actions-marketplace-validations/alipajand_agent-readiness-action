@@ -92,16 +92,19 @@ or the skill by name ran the script directly.
 - [x] Merge to `main`, tag `integrations-v<version>`, push the tag, and create its GitHub release
       (not marked Latest, so the action's release stays Latest) from
       `docs/integrations/RELEASE-NOTES.md`
-- [x] `npm publish` from `integrations/mcp-package` with 2FA (0.1.1 published 2026-10-12 from the tag; registry tarball SHA-256 `9b6a695e…` matches the tag build). The package does not request npm
+- [x] `npm publish` from `integrations/mcp-package` with 2FA (0.1.1 published 2026-10-12, registry tarball SHA-256 `9b6a695e…`; 0.1.2 published 2026-10-13, `4daba9c0…`; each matches its tag build). The package does not request npm
       provenance: npm only generates it from a supported CI provider, and no workflow here
       publishes. To publish with provenance, add a workflow with `id-token: write` that runs
       `npm publish --provenance` (or npm trusted publishing) from this repository
 - [x] `mcp-publisher login github` as `alipajand` (the `io.github.alipajand/*` namespace), then
       `mcp-publisher publish` from `integrations/mcp-package`. The registry checks that the
       published npm package's `mcpName` equals `server.json`'s `name`, so publish npm first
-      (0.1.1 published 2026-10-13; [registry entry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.alipajand/agent-readiness))
-- [ ] Release the action separately (README, "Release checklist"): this branch changes `dist/` through the
-      engine updates, so it needs a new action version, not only an integrations tag
+      (0.1.1 and 0.1.2 published 2026-10-13; [registry entry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.alipajand/agent-readiness))
+      If the login has expired, run `mcp-publisher login github` again. If the registry reports that
+      the npm version was not found right after `npm publish`, wait a few minutes and retry: npm's
+      cache can lag, and a refused publish registers nothing
+- [x] Release the action separately (README, "Release checklist") when `dist/` changes: done as
+      v1.2.0 for the engine updates; integrations 0.1.2 did not change `dist/`
 - [ ] Cursor Marketplace: submit or update at <https://cursor.com/marketplace/publish>, only after
       the Cursor check in § 3 passes
 - [ ] Update statuses and evidence in `docs/PUBLISHING-MATRIX.md`
