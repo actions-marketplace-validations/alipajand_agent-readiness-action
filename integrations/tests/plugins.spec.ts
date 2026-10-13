@@ -1,5 +1,6 @@
 import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
 import { TOOL_VERSION } from '../src/runtime/version';
 import { repoRoot } from './helpers';
@@ -45,6 +46,22 @@ describe('plugin manifests', () => {
       expect(value.startsWith('./')).toBe(true);
       expect(value).not.toContain('..');
       expect(existsSync(path.join(pluginDir, value))).toBe(true);
+    }
+  });
+
+  it("validate against Cursor's published plugin and marketplace schemas", () => {
+    // Snapshots of schemas/plugin.schema.json and schemas/marketplace.schema.json from
+    // github.com/cursor/plugins at fe53d9e. Cursor's schema allows only `name` and `email` in
+    // `author`; an extra `url` made the 0.1.1 manifest invalid there.
+    const ajv = new Ajv({ strict: false, validateFormats: false });
+    for (const [schema, manifest] of [
+      ['cursor-plugin.schema.json', cursor],
+      ['cursor-marketplace.schema.json', cursorMarket],
+    ] as const) {
+      const validate = ajv.compile(
+        JSON.parse(readFileSync(path.join(import.meta.dirname, 'schemas', schema), 'utf8')),
+      );
+      expect(validate(manifest), JSON.stringify(validate.errors)).toBe(true);
     }
   });
 
@@ -106,6 +123,39 @@ describe('plugin contents', () => {
     );
     expect(skill).toContain('tell the user the audit did not run and why');
     expect(skill).toContain('do not replace the audit with your own reading of the files');
+  });
+
+  it('give the Cursor command a name, a description, and a fail-closed rule', () => {
+    const text = readFileSync(
+      path.join(pluginDir, 'cursor-commands/agent-readiness-audit.md'),
+      'utf8',
+    );
+    const front = /^---\n([\s\S]*?)\n---\n/.exec(text)?.[1] ?? '';
+    expect(front).toMatch(/^name: agent-readiness-audit$/m);
+    expect(front).toMatch(/^description: \S.+$/m);
+    // Without this rule, a denied or failed run could turn into scores or a manual review.
+    const prose = text.replace(/\s+/g, ' ');
+    expect(prose).toContain('tell me the audit did not run and why');
+    expect(prose).toContain('do not say the audit succeeded');
+    expect(prose).toContain("do not read or inspect the repository's files instead");
+  });
+
+  it('ship a README that discloses requirements, data handling, and provenance', () => {
+    // Anthropic's directory blocks a plugin folder without a README of at least 40 words outside
+    // code blocks, and shows it as the listing description.
+    const readme = readFileSync(path.join(pluginDir, 'README.md'), 'utf8');
+    const prose = readme.replace(/```[\s\S]*?```/g, '');
+    expect(prose.split(/\s+/).filter(Boolean).length).toBeGreaterThanOrEqual(40);
+    for (const needle of [
+      'Node.js 22.12 or later',
+      'makes no network requests',
+      'to its model provider',
+      'pattern-based',
+      '`f15924b`',
+      '`034a74c`',
+    ]) {
+      expect(readme).toContain(needle);
+    }
   });
 
   it('ship the license with the plugin', () => {

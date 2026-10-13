@@ -3,6 +3,37 @@
 The skill, the Claude Code and Cursor plugin, and the MCP server are released together under
 `integrations-v<version>` tags. Those tags are independent of the GitHub Action's `v` tags.
 
+## 0.1.2 (unreleased)
+
+A coordinated release of every integration, for directory compatibility. The audit engines, their
+commits (agent-readiness-kit `f15924b`, agent-context-doctor `034a74c`), scoring, and the MCP
+server's behavior are unchanged; the MCP package and its registry entry move to 0.1.2 only because
+all integrations share one version.
+
+### Changed
+
+- The plugin folder has a `README.md`: purpose, installation, components, engine provenance,
+  Node.js requirement, what runs locally and what the AI client may send to its model provider,
+  masking limits, and tested clients. Anthropic's plugin directory requires one.
+- The Cursor manifest validates against Cursor's published plugin schema: `author` no longer has a
+  `url`, which the schema does not allow, and it gains `displayName`.
+- The Cursor command has `name` and `description` front matter and its own fail-closed rule: if the
+  script is denied or fails before printing a report, the model says the audit did not run, gives no
+  scores or findings, does not claim success, and does not read the repository's files instead.
+  Before, the Cursor command relied on the skill for that rule.
+
+### Tests
+
+- Both Cursor manifests are checked against snapshots of Cursor's schemas (`cursor/plugins` at
+  `fe53d9e`).
+- The Cursor command's front matter and fail-closed rule, and the plugin README's required
+  disclosures, are checked. Each new test fails on the 0.1.1 files.
+
+### Not tested
+
+Cursor itself (not installed on the build machine), Windows, and Claude Code's interactive
+permission prompts.
+
 ## 0.1.1 (2026-10-12)
 
 Tag `integrations-v0.1.1` (merge commit `30e26e1`); [GitHub release](https://github.com/alipajand/agent-readiness-action/releases/tag/integrations-v0.1.1). The MCP package is

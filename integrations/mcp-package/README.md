@@ -29,7 +29,7 @@ Requires Node.js 22.13 or later (23.5 or later on Node.js 23). Older releases ha
 permission model for the audit sandbox described below, and the server refuses to start on them.
 
 ```bash
-npm install -g @alipajand/agent-readiness-mcp@0.1.1
+npm install -g @alipajand/agent-readiness-mcp@0.1.2
 ```
 
 ## Configure a client
@@ -57,7 +57,7 @@ Cursor (`.cursor/mcp.json`) and other clients that use the `mcpServers` format:
 ```
 
 Without a global install, use `"command": "npx"` with
-`"args": ["-y", "@alipajand/agent-readiness-mcp@0.1.1", "--root", "/path/to/projects"]`. Keep the
+`"args": ["-y", "@alipajand/agent-readiness-mcp@0.1.2", "--root", "/path/to/projects"]`. Keep the
 version pinned.
 
 Options: `--root <dir>` (repeatable), `--timeout <seconds>` (default 120), `--max-concurrency <n>`

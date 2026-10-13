@@ -6,7 +6,7 @@ compatibility: Requires Node.js 22.12 or later. Works offline. No API key, packa
 allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/agent-readiness.mjs *)
 metadata:
   author: alipajand
-  version: '0.1.1'
+  version: '0.1.2'
   repository: https://github.com/alipajand/agent-readiness-action
 ---
 

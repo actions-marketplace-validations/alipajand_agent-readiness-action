@@ -11,9 +11,10 @@ and no listing exists yet on any of these four destinations (searched the same d
 | 3     | Anthropic plugin directory | **Blocked** (one fix) | Paid claude.ai plan, GitHub connected, contact email   | Plugin folder has no `README.md` (validation blocks)                                                          |
 | 4     | Cursor Marketplace         | **Blocked**           | Cursor installed and signed in; acceptance test        | Not tested in Cursor; four manifest and content findings, including no fail-closed rule in the Cursor command |
 
-Blockers 3 and 4 need changes inside `plugins/agent-readiness/`, which ships in the plugin. They
-belong in a coordinated integrations 0.1.2 release, not in this documentation change. See "Fixes for
-0.1.2".
+Blockers 3 and 4 need changes inside `plugins/agent-readiness/`. They are fixed on the
+`ali/integrations-0.1.2` branch for the coordinated integrations 0.1.2 release, which is not yet
+merged, tagged, or published. Until it is, every link and install command below still refers to
+0.1.1, which stays available.
 
 ## Disclosures every listing carries
 
@@ -182,7 +183,7 @@ were checked against the 0.1.1 plugin:
 
 `.cursor-plugin/marketplace.json` passes Cursor's marketplace schema.
 
-## Fixes for 0.1.2
+## Fixes for 0.1.2 (done on the release branch, not yet released)
 
 The integration tests require one version across the runtime (`TOOL_VERSION`), the skill metadata,
 both plugin manifests, the integrations package, the MCP npm package, and both versions in
@@ -214,9 +215,11 @@ runtime together and the npm package and `server.json` together, the MCP server 
 version, and tags would split into `plugin-v*` and `mcp-v*`. That changes the release process and
 the tests, so it needs its own review.
 
-## Cursor acceptance checklist (v0.1.1 artifacts)
+## Cursor acceptance checklist
 
-Run on a machine with Cursor installed and signed in. Record each result in
+Run on a machine with Cursor installed and signed in, on the 0.1.2 release once it is tagged
+(replace `integrations-v0.1.1` with `integrations-v0.1.2` and 0.1.1 with 0.1.2 below); the 0.1.1
+artifacts can be used for a first look. Record each result in
 `docs/PUBLISHING-MATRIX.md`. Run it again on 0.1.2 before submitting.
 
 1. Export the released plugin and a fixture:
