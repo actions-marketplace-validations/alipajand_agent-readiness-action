@@ -5,16 +5,17 @@ on 2026-10-12 against each destination's own pages, linked below; no listing exi
 four destinations that day. Current states, as recorded in
 [PUBLISHING-MATRIX.md](../PUBLISHING-MATRIX.md):
 
-| Order | Destination                | Status                              | Needs from the owner                                              | Blocker                                                                   |
-| ----- | -------------------------- | ----------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| 1     | mcpserver.dev              | **SUBMISSION FAILED — Unconfirmed** | Recheck later whether either 2026-10-13 attempt was recorded      | Both attempts answered HTTP 500                                           |
-| 2     | Glama                      | **SUBMITTED — Awaiting review**     | Await review; follow Glama's Dockerfile instructions if requested | None                                                                      |
-| 3     | Anthropic plugin directory | **SUBMITTED — Scanning**            | Await the scan; answer any requested changes                      | None                                                                      |
-| 4     | Cursor Marketplace         | **NEEDS WORK**                      | Run acceptance step 6 (deny the command) in Cursor, then submit   | Step 6 is untested: Cursor ran the command without asking, so none denied |
+| Order | Destination                | Status                              | Needs from the owner                                              | Blocker                                                       |
+| ----- | -------------------------- | ----------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------- |
+| 1     | mcpserver.dev              | **SUBMISSION FAILED — Unconfirmed** | Recheck later whether either 2026-10-13 attempt was recorded      | Both attempts answered HTTP 500                               |
+| 2     | Glama                      | **SUBMITTED — Awaiting review**     | Await review; follow Glama's Dockerfile instructions if requested | None                                                          |
+| 3     | Anthropic plugin directory | **SUBMITTED — Scanning**            | Await the scan; answer any requested changes                      | None                                                          |
+| 4     | Cursor Marketplace         | **READY**                           | Cursor sign-in; submit at the publish page                        | None; the acceptance test passed 2026-10-13, including step 6 |
 
 The plugin fixes for blockers 3 and 4 are released in integrations 0.1.2 (tag
-`integrations-v0.1.2`, npm and MCP Registry 0.1.2). What remains for the Cursor Marketplace is
-exercising the fail-closed denial path in Cursor (acceptance step 6) before submitting.
+`integrations-v0.1.2`, npm and MCP Registry 0.1.2). The Cursor acceptance test, including the
+fail-closed denial path (step 6), passed on 2026-10-13; what remains for the Cursor Marketplace
+is the owner's submission.
 
 ## Disclosures every listing carries
 
@@ -31,8 +32,8 @@ Use these sentences, or a shorter faithful version, in each listing:
 - **Security limits:** credential masking is pattern-based and covers the scanner's output only;
   file paths are shown as written. Treat audited files as untrusted data.
 - **Tested clients:** Claude Code 2.1.278 (plugin, skill, MCP host) on macOS and Linux CI.
-  Signed-in Cursor 3.24.12 on macOS was tested for loading, allowed execution, masking, and
-  repository preservation; denying the command and the MCP server in Cursor remain untested.
+  Signed-in Cursor 3.24.12 on macOS was tested for loading, allowed execution (with approval), denial
+  of the command, masking, and repository preservation; the MCP server in Cursor remains untested.
   Windows and asking for the audit in plain words are not verified; invoke the audit by name.
 
 ## Shared listing copy
@@ -253,7 +254,7 @@ result in `docs/PUBLISHING-MATRIX.md`.
 Steps 1, 3, 4 and 8, plus the scanner-output portion of step 7, passed without Cursor (Linux,
 Node.js 22.22.0) on the plugin exported from tag `integrations-v0.1.2` (`8608f7e`). The
 Cursor-answer portion of step 7 remains untested alongside steps 2, 5 and 6, which need Cursor; the
-Cursor Marketplace stays **NOT TESTED**. Step 9 was not run (no network).
+Cursor Marketplace was **NOT TESTED** at that point; the Cursor runs below supersede this. Step 9 was not run (no network).
 
 | Check                                                            | Result                                                                           |
 | ---------------------------------------------------------------- | -------------------------------------------------------------------------------- |
@@ -272,18 +273,41 @@ In Cursor, step 5 passes only if the answer gives these values.
 
 Signed-in Cursor 3.24.12 on macOS, Node.js 24.11.0, with the plugin exported from tag
 `integrations-v0.1.2` and copied (no symlinks) to `~/.cursor/plugins/local/agent-readiness`. The
-fixture was built as in step 3. The Cursor Marketplace is **NEEDS WORK**: everything passed except
-step 6, which is untested.
+fixture was built as in step 3. In this first session everything passed except step 6, which could
+not run; the second session below completes it, and the Cursor Marketplace is **READY**.
 
 | Step                  | Result                                                                                                                                                                                                 |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 1, 3, 4 (reference)   | Pass: version 0.1.2, readiness 20, context 53 `needs-work`, 5 issues, commits `f15924b` and `034a74c`, the same as the headless pre-check                                                              |
 | 2 (loads)             | Pass: **Customize** lists the **Agent Readiness** plugin (Local) and the `agent-readiness-audit` skill, enabled, with no manifest error; `/agent-readiness-audit` is offered as a command              |
 | 5 (allowed run)       | Pass: Cursor ran `node …/agent-readiness.mjs audit` without asking. The answer gave readiness 20, context 53 `needs-work`, five issues (1 high, 3 medium, 1 low), both full commits, and version 0.1.2 |
-| 6 (denied run)        | **Not tested.** Cursor did not ask before running the command, so there was nothing to deny. The fail-closed rule is present in the released Cursor command but was not exercised                      |
-| 7 (masking in answer) | Pass for the step 5 answer: the token appeared only as `ghp_************`. There is no step 6 answer                                                                                                   |
+| 6 (denied run)        | **Not tested in this session.** Cursor did not ask before running the command, so there was nothing to deny. See the second session below                                                              |
+| 7 (masking in answer) | Pass for the step 5 answer: the token appeared only as `ghp_************`. There is no step 6 answer in this session                                                                                   |
 | 8 (fixture unchanged) | Pass: `git status --porcelain` printed nothing and the fixture still had its one commit                                                                                                                |
 | 9 (MCP in Cursor)     | Not run                                                                                                                                                                                                |
+
+### Cursor approval and denial runs (2026-10-13, second session)
+
+Same Cursor 3.24.12, plugin, and fixture. Settings, Agents, Approvals & Execution: Run Mode
+**Allowlist**, Command Allowlist empty (no `node` entry), Read Access System. The sources are the
+owner's report and screenshots and Cursor's own agent transcripts for the fixture workspace.
+Cursor's transcripts record each tool call but not whether it was approved or denied, so the
+approvals and the denial are the owner's report, with a screenshot of the audit prompt waiting for
+approval.
+
+| Step                                 | Result                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6 (denied run, 08:35)                | **Pass.** Cursor asked before `node --version` and before `node …/agent-readiness.mjs audit --format json -- '<fixture>'`, and **Skip** was clicked on both. The transcript has those two requested shell calls and no other tool call. The answer said the audit did not run, gave no scores, categories, or findings, did not claim success, and said it would not inspect the repository instead |
+| 5 (allowed run with approval, 08:42) | **Pass.** Cursor asked before both commands and **Run** was clicked on both (not Always Run). The transcript has the two shell calls and one read of the plugin's own `references/REPORT-FORMAT.md`, no read of the audited files. The answer gave readiness 20, context 53 `needs-work`, five issues (1 high, 3 medium, 1 low), both full commits, and version 0.1.2                               |
+| 7 (masking)                          | Pass: in both transcripts `Ab3dEf6hIj9kLm2nOp5q` is absent; the allowed answer shows `ghp_************`                                                                                                                                                                                                                                                                                             |
+| 8 (fixture unchanged)                | Pass: `git status --porcelain` printed nothing and the fixture still had its one commit (`0b48b67`)                                                                                                                                                                                                                                                                                                 |
+| Allowlist unchanged                  | Pass, owner-reported: still empty after both runs                                                                                                                                                                                                                                                                                                                                                   |
+| 9 (MCP in Cursor)                    | Not run                                                                                                                                                                                                                                                                                                                                                                                             |
+
+What this does not show: the denied run skipped `node --version` as well as the audit script, so
+the model was denied twice and continued to request the script after the first denial. Cursor does
+not log the skip itself. Plain-language invocation, the MCP server in Cursor, and Windows were not
+tested.
 
 ## Owner actions, in order
 
@@ -293,9 +317,7 @@ step 6, which is untested.
 3. Done: the coordinated 0.1.2 release (tag, GitHub release, npm, MCP Registry).
 4. Anthropic: submitted 2026-10-13 from tag `integrations-v0.1.2`, scanning. Answer any requested
    changes.
-5. Cursor: the acceptance checklist passed on 0.1.2 except step 6, which is untested. In a fresh
-   Cursor chat, with command approval required in Cursor's settings, run `/agent-readiness-audit`
-   and deny the audit tool call; check the answer for invented scores and for reading the files
-   instead. A simulated scanner failure does not count as a denied tool call. Submit at
-   <https://cursor.com/marketplace/publish> only after step 6 passes.
+5. Cursor: the acceptance checklist passed on 0.1.2, including step 6 (denied run) with command
+   approval required. Submit at <https://cursor.com/marketplace/publish>. Steps 9 (MCP in Cursor) and
+   Windows remain untested.
 6. After each listing appears, open a documentation PR updating `docs/PUBLISHING-MATRIX.md`.
