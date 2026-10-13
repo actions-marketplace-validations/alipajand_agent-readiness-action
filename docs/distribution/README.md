@@ -12,7 +12,8 @@ them are built from this repository.
 | Cursor plugin `agent-readiness`             | `plugins/agent-readiness/` + `.cursor-plugin/marketplace.json` | Cursor Marketplace (after review)                                                                                  |
 | MCP server `@alipajand/agent-readiness-mcp` | `integrations/mcp-package/`                                    | `npm install -g @alipajand/agent-readiness-mcp@0.1.1`                                                              |
 
-Status per directory: [../PUBLISHING-MATRIX.md](../PUBLISHING-MATRIX.md). Release steps:
+Status per directory: [../PUBLISHING-MATRIX.md](../PUBLISHING-MATRIX.md). Submission material
+for the remaining directories: [SUBMISSIONS.md](SUBMISSIONS.md). Release steps:
 [../RELEASE-CHECKLIST.md](../RELEASE-CHECKLIST.md).
 
 ## Claims we make
