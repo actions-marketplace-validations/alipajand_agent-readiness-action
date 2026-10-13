@@ -245,6 +245,26 @@ result in `docs/PUBLISHING-MATRIX.md`.
    to `~/.cursor/mcp.json`, call `audit_repository` and `audit_agent_context` on the fixture, and
    compare with step 4.
 
+### Headless pre-check (2026-10-13)
+
+Steps 1, 3, 4 and 8, plus the scanner-output portion of step 7, passed without Cursor (Linux,
+Node.js 22.22.0) on the plugin exported from tag `integrations-v0.1.2` (`8608f7e`). The
+Cursor-answer portion of step 7 remains untested alongside steps 2, 5 and 6, which need Cursor; the
+Cursor Marketplace stays **NOT TESTED**. Step 9 was not run (no network).
+
+| Check                                                            | Result                                                                           |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `version`                                                        | 0.1.2; agent-readiness-kit 1.0.0 `f15924b`, agent-context-doctor 1.0.0 `034a74c` |
+| `readiness.result.score`                                         | 20                                                                               |
+| `context.result.report.score.total` / `grade`                    | 53 / `needs-work`                                                                |
+| `context.result.report.summary.issueCount`                       | 5 (1 high, 3 medium, 1 low)                                                      |
+| Deterministic                                                    | Three `--format json` runs were byte-identical                                   |
+| Secret `Ab3dEf6hIj9kLm2nOp5q` in scanner output (JSON, Markdown) | Absent; shown as `ghp_************`                                              |
+| `git status --porcelain` on the fixture after 4 audits           | Empty                                                                            |
+| Cursor command fail-closed rule and front matter                 | Present in the released `cursor-commands/agent-readiness-audit.md`               |
+
+In Cursor, step 5 passes only if the answer gives these values.
+
 ## Owner actions, in order
 
 1. mcpserver.dev: submit the form above. No account needed to open it.
