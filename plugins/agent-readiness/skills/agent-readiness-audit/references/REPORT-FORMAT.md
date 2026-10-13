@@ -6,7 +6,7 @@
 ```jsonc
 {
   "schemaVersion": 1,
-  "tool": { "name": "agent-readiness", "version": "0.1.0" },
+  "tool": { "name": "agent-readiness", "version": "0.1.2" },
   "target": "/absolute/path/after/resolving/symlinks",
   "engines": {
     "readiness": {

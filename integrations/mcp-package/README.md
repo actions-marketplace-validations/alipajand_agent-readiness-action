@@ -29,7 +29,7 @@ Requires Node.js 22.13 or later (23.5 or later on Node.js 23). Older releases ha
 permission model for the audit sandbox described below, and the server refuses to start on them.
 
 ```bash
-npm install -g @alipajand/agent-readiness-mcp@0.1.0
+npm install -g @alipajand/agent-readiness-mcp@0.1.2
 ```
 
 ## Configure a client
@@ -57,7 +57,7 @@ Cursor (`.cursor/mcp.json`) and other clients that use the `mcpServers` format:
 ```
 
 Without a global install, use `"command": "npx"` with
-`"args": ["-y", "@alipajand/agent-readiness-mcp@0.1.0", "--root", "/path/to/projects"]`. Keep the
+`"args": ["-y", "@alipajand/agent-readiness-mcp@0.1.2", "--root", "/path/to/projects"]`. Keep the
 version pinned.
 
 Options: `--root <dir>` (repeatable), `--timeout <seconds>` (default 120), `--max-concurrency <n>`
@@ -74,6 +74,9 @@ Options: `--root <dir>` (repeatable), `--timeout <seconds>` (default 120), `--ma
 - Stdout carries only MCP messages; diagnostics go to stderr.
 - Reports are kept in memory for the session (the 20 most recent) and never written to disk.
 - Text in results comes from the audited repository and should be treated as data.
+- The server is offline, but the MCP host is not part of it: the host's model reads the results
+  and the host may send them, or files it reads itself, to its model provider. Credential masking
+  covers the server's results only.
 
 ## License
 

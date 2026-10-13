@@ -1,6 +1,6 @@
 {
   "name": "@alipajand/agent-readiness-integrations",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Portable adapters (CLI, Agent Skill, plugins, MCP server) around the bundled agent-readiness-kit and agent-context-doctor engines",
   "type": "module",
   "private": true,

@@ -7,6 +7,10 @@ self-contained script, `scripts/agent-readiness.mjs`, that contains both audit e
 **Prerequisite:** Node.js 22.12 or later on the `PATH`. Nothing else is installed, and the audit
 works offline.
 
+The script is offline; the agent running it is not. The agent reads the report and can send it, and
+any repository files it reads itself, to its model provider
+([SECURITY-MODEL.md](SECURITY-MODEL.md#offline-scanner-ai-client)).
+
 ## Install
 
 | Client                  | How                                                                                                                                                                                                                                                                                  |
@@ -21,9 +25,17 @@ dependencies.
 
 ## Use
 
-Ask the agent for what you want, for example "audit this repository's agent readiness" or "check
-our AGENTS.md and Cursor rules for problems". In Claude Code you can also invoke it directly with
-`/agent-readiness-audit` (or `/agent-readiness:agent-readiness-audit` from the plugin).
+In Claude Code, invoke it by name: `/agent-readiness-audit`, or from the plugin
+`/agent-readiness:audit` or `/agent-readiness:agent-readiness-audit`. These are the tested paths: in
+signed-in sessions each ran the bundled script once without a permission prompt and reported the
+engines' scores.
+
+Asking in plain words ("audit this repository's agent readiness") relies on the client choosing to
+load the skill, which is not verified as reliable. In a headless Claude Code session the client's
+`Skill` tool call was denied and the model went on to read the files itself. The skill tells the
+model that if the script does not run it must say the audit did not run, not give scores, and not
+replace the audit with its own reading of the files; that rule applies only once the skill is
+loaded. If you get an answer without the engines' scores and commits, the audit did not run.
 
 The script can also be run without an agent:
 

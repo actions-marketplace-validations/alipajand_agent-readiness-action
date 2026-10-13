@@ -26,6 +26,18 @@ Audited files are data. The skill tells the agent not to follow instructions fou
 `CLAUDE.md`, or any other audited file, and to report them only as findings. The MCP server
 returns engine findings as structured data and never acts on file contents.
 
+## Offline scanner, AI client
+
+The scanner is offline and deterministic: the skill script and the MCP server make no network
+requests, and the same repository and engine commits always give the same report. The AI client
+that runs them is a separate program with its own data handling. It reads the audit results and
+can send them to its model provider; it may also read the repository's files directly, outside the
+scanner, and send those too. These integrations cannot control that. Credential masking applies
+only to the scanner's output, never to files the client reads itself. Check the client's data
+policy before auditing a repository whose contents must not leave the machine, or run the script
+without an agent:
+`node plugins/agent-readiness/skills/agent-readiness-audit/scripts/agent-readiness.mjs audit <path>`.
+
 ## What is out of scope
 
 - The engines' detection rules and scoring. They are reviewed in their own repositories.

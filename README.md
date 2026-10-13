@@ -299,7 +299,9 @@ move or depend on the action's `v` tags.
 
 ## Outside GitHub Actions
 
-The same pinned engines are packaged for local use by AI coding agents, read-only and offline:
+The same pinned engines are packaged for local use by AI coding agents. The scanner is read-only and
+offline; the agent that runs it may send the results to its model provider
+([security model](docs/integrations/SECURITY-MODEL.md#offline-scanner-ai-client)):
 
 - **Agent Skill** `agent-readiness-audit` for Claude Code, Cursor, Codex, and other skill clients:
   [docs/integrations/SKILL-USAGE.md](docs/integrations/SKILL-USAGE.md)

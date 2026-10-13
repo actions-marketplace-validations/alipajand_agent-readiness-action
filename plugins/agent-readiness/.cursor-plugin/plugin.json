@@ -1,10 +1,10 @@
 {
   "name": "agent-readiness",
-  "version": "0.1.0",
+  "displayName": "Agent Readiness",
+  "version": "0.1.2",
   "description": "Score a repository's readiness for AI coding agents and check AGENTS.md, CLAUDE.md, Cursor rules, and MCP config for quality and safety problems. Deterministic, read-only, offline; no LLM scoring.",
   "author": {
-    "name": "Ali Pajand",
-    "url": "https://github.com/alipajand"
+    "name": "Ali Pajand"
   },
   "homepage": "https://github.com/alipajand/agent-readiness-action/blob/main/docs/integrations/PLUGINS.md",
   "repository": "https://github.com/alipajand/agent-readiness-action",

@@ -52,7 +52,7 @@ MCP client ──stdio──▶ server.js (SDK 2.2.0, McpServer + StdioServerTra
 
 ## Test results
 
-`pnpm integrations:test`: 16 files, 112 tests passing (2026-10-12). The MCP-specific tests are:
+`pnpm integrations:test`: 16 files, 117 tests passing at `integrations-v0.1.1` (2026-10-12). The MCP-specific tests are:
 
 | Area               | Test                                                                                                                                                             | Result                          |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
@@ -73,21 +73,22 @@ MCP client ──stdio──▶ server.js (SDK 2.2.0, McpServer + StdioServerTra
 
 ## Client compatibility
 
-| Client                               | How verified                                                                     | Status                                                 |
-| ------------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Official TypeScript client SDK 2.2.0 | Automated tests above                                                            | Verified                                               |
-| MCP Inspector CLI 2.10.1             | `--method tools/list` and `tools/call audit_repository` against `dist/server.js` | Verified (this found and fixed the nested-grant issue) |
-| Older (handshake-era) clients        | Raw `initialize` with protocol `2025-11-25` in the stream test                   | Verified                                               |
-| Claude Code, Cursor, other hosts     | Configuration documented in the package README                                   | Not verified in a live host from this machine          |
+| Client                                    | How verified                                                                                                           | Status                                                                                                                                                                                                                                                                                                                         |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Official TypeScript client SDK 2.2.0      | Automated tests above                                                                                                  | Verified                                                                                                                                                                                                                                                                                                                       |
+| MCP Inspector CLI 2.10.1                  | `--method tools/list` and `tools/call audit_repository` against `dist/server.js`                                       | Verified (this found and fixed the nested-grant issue)                                                                                                                                                                                                                                                                         |
+| Older (handshake-era) clients             | Raw `initialize` with protocol `2025-11-25` in the stream test                                                         | Verified                                                                                                                                                                                                                                                                                                                       |
+| Claude Code 2.1.278 (signed in, headless) | Packed tarball installed offline; server given with `--mcp-config` and `--root`; all three tools called from a session | Verified 2026-10-12: server connected with no startup or sandbox error; scores equal to the engines (readiness 31, context 0 risky); `get_audit_report` paged 5 + 10 + 10 + 2 = 27 items; `OUTSIDE_ROOT` for a path outside the root; `CONFIG_INVALID` for an `.acdrc` linked outside; no planted credential in the transcript |
+| Cursor, other hosts                       | Configuration documented in the package README                                                                         | Not tested: Cursor is not installed on the build machine                                                                                                                                                                                                                                                                       |
 
 ## Packaging and registry status
 
-| Item                                      | Status                                                                                                                                                                                         |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| npm name `@alipajand/agent-readiness-mcp` | Not taken on npm; the `@alipajand` scope belongs to the owner's npm account                                                                                                                    |
-| Dependencies                              | None at run time; `@modelcontextprotocol/server` 2.2.0 and `zod` 4.6.5 are compiled in (2.2.0 chosen as the newest release at least two weeks old; 2.3.x only changes HTTP auth and redirects) |
-| `server.json`                             | Valid: `mcp-publisher validate` (1.8.1, checksum verified) reported `✅ server.json is valid` against `registry.modelcontextprotocol.io`                                                       |
-| Publication                               | Not done. Requires `npm publish` by the owner, then `mcp-publisher login github` and `mcp-publisher publish`                                                                                   |
+| Item                                      | Status                                                                                                                                                                                                                                                                   |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| npm name `@alipajand/agent-readiness-mcp` | Published: [0.1.1 and 0.1.2 on npm](https://www.npmjs.com/package/@alipajand/agent-readiness-mcp), each byte-identical to its `integrations-v*` tag build; `latest` is 0.1.2                                                                                             |
+| Dependencies                              | None at run time; `@modelcontextprotocol/server` 2.2.0 and `zod` 4.6.5 are compiled in (2.2.0 chosen as the newest release at least two weeks old; 2.3.x only changes HTTP auth and redirects)                                                                           |
+| `server.json`                             | Valid: `mcp-publisher validate` (1.8.1, checksum verified) reported `✅ server.json is valid` against `registry.modelcontextprotocol.io`                                                                                                                                 |
+| Publication                               | Done: npm `@alipajand/agent-readiness-mcp` 0.1.1 and 0.1.2, and MCP Registry `io.github.alipajand/agent-readiness` 0.1.1 and 0.1.2 ([entry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.alipajand/agent-readiness)), 2026-10-12/13 by the owner |
 
 ## Dependency audit
 
