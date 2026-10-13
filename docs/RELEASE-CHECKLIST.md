@@ -92,7 +92,7 @@ or the skill by name ran the script directly.
 - [x] Merge to `main`, tag `integrations-v<version>`, push the tag, and create its GitHub release
       (not marked Latest, so the action's release stays Latest) from
       `docs/integrations/RELEASE-NOTES.md`
-- [ ] `npm publish` from `integrations/mcp-package` with 2FA. The package does not request npm
+- [x] `npm publish` from `integrations/mcp-package` with 2FA (0.1.1 published 2026-10-12 from the tag; registry tarball SHA-256 `9b6a695e…` matches the tag build). The package does not request npm
       provenance: npm only generates it from a supported CI provider, and no workflow here
       publishes. To publish with provenance, add a workflow with `id-token: write` that runs
       `npm publish --provenance` (or npm trusted publishing) from this repository

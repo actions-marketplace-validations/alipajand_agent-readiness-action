@@ -6,7 +6,7 @@ The skill, the Claude Code and Cursor plugin, and the MCP server are released to
 ## 0.1.1 (2026-10-12)
 
 Tag `integrations-v0.1.1` (merge commit `30e26e1`); [GitHub release](https://github.com/alipajand/agent-readiness-action/releases/tag/integrations-v0.1.1). The MCP package is
-not yet published to npm or the MCP Registry.
+on npm as [`@alipajand/agent-readiness-mcp@0.1.1`](https://www.npmjs.com/package/@alipajand/agent-readiness-mcp); it is not yet in the MCP Registry.
 
 First release. It packages the same pinned engines as agent-readiness-action v1.2.0 for local
 use by AI coding agents: read-only, offline scanning with no LLM scoring.
@@ -15,12 +15,12 @@ Version 0.1.0 was never tagged or published, but the plugin was installable from
 before the fixes below. Claude Code updates an installed plugin only when its version changes, so
 the first release is 0.1.1.
 
-| Component                                        | Version | Where                                                                                                                          | Status                                                     |
-| ------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| Agent Skill `agent-readiness-audit`              | 0.1.1   | `plugins/agent-readiness/skills/agent-readiness-audit/`; `npx skills add alipajand/agent-readiness-action`                     | Tested in Claude Code                                      |
-| Claude Code plugin `agent-readiness`             | 0.1.1   | `claude plugin marketplace add alipajand/agent-readiness-action`, then `claude plugin install agent-readiness@agent-readiness` | Tested in Claude Code                                      |
-| MCP server `@alipajand/agent-readiness-mcp`      | 0.1.1   | npm (not yet published); MCP Registry name `io.github.alipajand/agent-readiness`                                               | Tested with Claude Code as host                            |
-| Cursor plugin (same `agent-readiness` directory) | 0.1.1   | Local install only (`~/.cursor/plugins/local/`)                                                                                | **Not tested in Cursor; not submitted to the Marketplace** |
+| Component                                        | Version | Where                                                                                                                                                                                            | Status                                                     |
+| ------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| Agent Skill `agent-readiness-audit`              | 0.1.1   | `plugins/agent-readiness/skills/agent-readiness-audit/`; `npx skills add alipajand/agent-readiness-action`                                                                                       | Tested in Claude Code                                      |
+| Claude Code plugin `agent-readiness`             | 0.1.1   | `claude plugin marketplace add alipajand/agent-readiness-action`, then `claude plugin install agent-readiness@agent-readiness`                                                                   | Tested in Claude Code                                      |
+| MCP server `@alipajand/agent-readiness-mcp`      | 0.1.1   | [npm](https://www.npmjs.com/package/@alipajand/agent-readiness-mcp): `npx -y @alipajand/agent-readiness-mcp@0.1.1`; MCP Registry name `io.github.alipajand/agent-readiness` (not yet registered) | Tested with Claude Code as host                            |
+| Cursor plugin (same `agent-readiness` directory) | 0.1.1   | Local install only (`~/.cursor/plugins/local/`)                                                                                                                                                  | **Not tested in Cursor; not submitted to the Marketplace** |
 
 Engines: agent-readiness-kit `f15924b` and agent-context-doctor `034a74c`. Every report and bundle
 header names both commits.

@@ -10,7 +10,7 @@ them are built from this repository.
 | Agent Skill `agent-readiness-audit`         | `plugins/agent-readiness/skills/agent-readiness-audit/`        | `npx skills add alipajand/agent-readiness-action --skill agent-readiness-audit`                                    |
 | Claude Code plugin `agent-readiness`        | `plugins/agent-readiness/` + `.claude-plugin/marketplace.json` | `/plugin marketplace add alipajand/agent-readiness-action`, then `/plugin install agent-readiness@agent-readiness` |
 | Cursor plugin `agent-readiness`             | `plugins/agent-readiness/` + `.cursor-plugin/marketplace.json` | Cursor Marketplace (after review)                                                                                  |
-| MCP server `@alipajand/agent-readiness-mcp` | `integrations/mcp-package/`                                    | `npm install -g @alipajand/agent-readiness-mcp@0.1.1` (after it is published)                                      |
+| MCP server `@alipajand/agent-readiness-mcp` | `integrations/mcp-package/`                                    | `npm install -g @alipajand/agent-readiness-mcp@0.1.1`                                                              |
 
 Status per directory: [../PUBLISHING-MATRIX.md](../PUBLISHING-MATRIX.md). Release steps:
 [../RELEASE-CHECKLIST.md](../RELEASE-CHECKLIST.md).
