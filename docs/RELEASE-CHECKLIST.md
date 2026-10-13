@@ -78,7 +78,11 @@ fixture repositories; evidence in `RELEASE-READINESS.md`):
 - [ ] Cursor: copy `plugins/agent-readiness` to `~/.cursor/plugins/local/agent-readiness`, reload,
       run the `agent-readiness-audit` command on a sample repository, and confirm it reports the
       same scores as `node plugins/agent-readiness/skills/agent-readiness-audit/scripts/agent-readiness.mjs audit <repo>`.
-      **Not tested**: Cursor is not installed on the build machine
+      **Partly tested** (2026-10-13, signed-in Cursor 3.24.12 on macOS, released 0.1.2): loading,
+      the allowed run (same scores as the script), masking, and an unchanged repository passed.
+      Still open: deny the command in Cursor and confirm the answer says the audit did not run,
+      gives no scores, and does not read the files instead (acceptance step 6 in
+      `distribution/SUBMISSIONS.md`). This box stays unchecked until that passes
 - [ ] Windows, if it is to be listed as supported: run the skill script and the MCP server once.
       **Not tested**: no Windows machine or CI job
 

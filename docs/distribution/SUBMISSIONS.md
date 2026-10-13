@@ -1,19 +1,20 @@
 # Directory submissions
 
 Owner-ready material for the remaining listings of Agent Readiness 0.1.2. Requirements were checked
-on 2026-10-12 against each destination's own pages, linked below. Nothing here has been submitted,
-and no listing exists yet on any of these four destinations (searched the same day).
+on 2026-10-12 against each destination's own pages, linked below; no listing existed on any of these
+four destinations that day. Current states, as recorded in
+[PUBLISHING-MATRIX.md](../PUBLISHING-MATRIX.md):
 
-| Order | Destination                | Status      | Needs from the owner                                   | Blocker                                                                      |
-| ----- | -------------------------- | ----------- | ------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| 1     | mcpserver.dev              | Ready       | Submit the public form                                 | None                                                                         |
-| 2     | Glama                      | Ready       | Glama account; may already appear via the MCP Registry | None                                                                         |
-| 3     | Anthropic plugin directory | **Ready**   | Paid claude.ai plan, GitHub connected, contact email   | None; the plugin README is released in 0.1.2                                 |
-| 4     | Cursor Marketplace         | **Blocked** | Decide on the untested denial step, then submit        | Acceptance test passed in Cursor except step 6 (denial), which could not run |
+| Order | Destination                | Status                              | Needs from the owner                                              | Blocker                                                                   |
+| ----- | -------------------------- | ----------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1     | mcpserver.dev              | **SUBMISSION FAILED — Unconfirmed** | Recheck later whether either 2026-10-13 attempt was recorded      | Both attempts answered HTTP 500                                           |
+| 2     | Glama                      | **SUBMITTED — Awaiting review**     | Await review; follow Glama's Dockerfile instructions if requested | None                                                                      |
+| 3     | Anthropic plugin directory | **SUBMITTED — Scanning**            | Await the scan; answer any requested changes                      | None                                                                      |
+| 4     | Cursor Marketplace         | **NEEDS WORK**                      | Run acceptance step 6 (deny the command) in Cursor, then submit   | Step 6 is untested: Cursor ran the command without asking, so none denied |
 
 The plugin fixes for blockers 3 and 4 are released in integrations 0.1.2 (tag
-`integrations-v0.1.2`, npm and MCP Registry 0.1.2). What remains is the owner's Anthropic
-submission and a decision on the untested Cursor denial step.
+`integrations-v0.1.2`, npm and MCP Registry 0.1.2). What remains for the Cursor Marketplace is
+exercising the fail-closed denial path in Cursor (acceptance step 6) before submitting.
 
 ## Disclosures every listing carries
 
@@ -29,8 +30,10 @@ Use these sentences, or a shorter faithful version, in each listing:
   data policy.
 - **Security limits:** credential masking is pattern-based and covers the scanner's output only;
   file paths are shown as written. Treat audited files as untrusted data.
-- **Tested clients:** Claude Code 2.1.278 (plugin, skill, MCP host) on macOS and Linux CI. Cursor,
-  Windows, and asking for the audit in plain words are not verified; invoke the audit by name.
+- **Tested clients:** Claude Code 2.1.278 (plugin, skill, MCP host) on macOS and Linux CI.
+  Signed-in Cursor 3.24.12 on macOS was tested for loading, allowed execution, masking, and
+  repository preservation; denying the command and the MCP server in Cursor remain untested.
+  Windows and asking for the audit in plain words are not verified; invoke the audit by name.
 
 ## Shared listing copy
 
@@ -284,11 +287,15 @@ step 6, which is untested.
 
 ## Owner actions, in order
 
-1. mcpserver.dev: submit the form above. No account needed to open it.
-2. Glama: search for `io.github.alipajand/agent-readiness`. If absent, sign in and **Add Server**.
+1. mcpserver.dev: submitted twice on 2026-10-13, both answered HTTP 500. Recheck whether either
+   was recorded before trying again.
+2. Glama: submitted 2026-10-13, awaiting review.
 3. Done: the coordinated 0.1.2 release (tag, GitHub release, npm, MCP Registry).
-4. Anthropic: in the portal, **Validate** the tag, answer data handling and compliance, submit.
-5. Cursor: the acceptance checklist passed on 0.1.2 except step 6 (denial), which is untested.
-   Rerun step 6 with command approval on in Cursor, or submit at
-   <https://cursor.com/marketplace/publish> with that gap stated.
+4. Anthropic: submitted 2026-10-13 from tag `integrations-v0.1.2`, scanning. Answer any requested
+   changes.
+5. Cursor: the acceptance checklist passed on 0.1.2 except step 6, which is untested. In a fresh
+   Cursor chat, with command approval required in Cursor's settings, run `/agent-readiness-audit`
+   and deny the audit tool call; check the answer for invented scores and for reading the files
+   instead. A simulated scanner failure does not count as a denied tool call. Submit at
+   <https://cursor.com/marketplace/publish> only after step 6 passes.
 6. After each listing appears, open a documentation PR updating `docs/PUBLISHING-MATRIX.md`.

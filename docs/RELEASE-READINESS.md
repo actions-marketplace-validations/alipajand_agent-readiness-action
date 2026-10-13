@@ -129,7 +129,7 @@ planted credentials, so an engine update that dropped its masking would fail CI.
 
 ## Remaining blockers
 
-| Blocker       | Severity                          | Evidence             | Owner action                                                                    |
-| ------------- | --------------------------------- | -------------------- | ------------------------------------------------------------------------------- |
-| Cursor plugin | Blocks the Cursor submission only | Denial path untested | Rerun acceptance step 6 with command approval on, or submit with the gap stated |
-| Windows       | Only if listed as supported       | Not tested           | Run the skill script and the MCP server once, or keep Windows unlisted          |
+| Blocker       | Severity                          | Evidence             | Owner action                                                           |
+| ------------- | --------------------------------- | -------------------- | ---------------------------------------------------------------------- |
+| Cursor plugin | Blocks the Cursor submission only | Denial path untested | Run acceptance step 6 (deny the command) in Cursor before submitting   |
+| Windows       | Only if listed as supported       | Not tested           | Run the skill script and the MCP server once, or keep Windows unlisted |
