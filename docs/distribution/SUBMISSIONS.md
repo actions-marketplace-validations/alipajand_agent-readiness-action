@@ -5,17 +5,25 @@ on 2026-10-12 against each destination's own pages, linked below; no listing exi
 four destinations that day. Current states, as recorded in
 [PUBLISHING-MATRIX.md](../PUBLISHING-MATRIX.md):
 
-| Order | Destination                | Status                              | Needs from the owner                                              | Blocker                                                       |
-| ----- | -------------------------- | ----------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------- |
-| 1     | mcpserver.dev              | **SUBMISSION FAILED — Unconfirmed** | Recheck later whether either 2026-10-13 attempt was recorded      | Both attempts answered HTTP 500                               |
-| 2     | Glama                      | **SUBMITTED — Awaiting review**     | Await review; follow Glama's Dockerfile instructions if requested | None                                                          |
-| 3     | Anthropic plugin directory | **SUBMITTED — Scanning**            | Await the scan; answer any requested changes                      | None                                                          |
-| 4     | Cursor Marketplace         | **SUBMITTED — Awaiting review**     | Await Cursor's email; answer any requested changes                | None; the acceptance test passed 2026-10-13, including step 6 |
+| Order | Destination                | Status                          | Needs from the owner                                              | Blocker                                                       |
+| ----- | -------------------------- | ------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------- |
+| 1     | mcpserver.dev              | **PUBLISHED** — origin unknown  | Nothing; do not resubmit                                          | None; listed despite the two HTTP 500 answers                 |
+| 2     | Glama                      | **SUBMITTED — Awaiting review** | Await review; follow Glama's Dockerfile instructions if requested | None                                                          |
+| 3     | Anthropic plugin directory | **SUBMITTED — Scanning**        | Await the scan; answer any requested changes                      | None                                                          |
+| 4     | Cursor Marketplace         | **SUBMITTED — Awaiting review** | Await Cursor's email; answer any requested changes                | None; the acceptance test passed 2026-10-13, including step 6 |
 
 The plugin fixes for blockers 3 and 4 are released in integrations 0.1.2 (tag
 `integrations-v0.1.2`, npm and MCP Registry 0.1.2). The Cursor acceptance test, including the
 fail-closed denial path (step 6), passed on 2026-10-13; the application was submitted on
 2026-10-13 and awaits Cursor's review.
+
+Found on 2026-10-14 and not part of this plan: the public mcpserver.dev page
+<https://mcpserver.dev/s/agent-readiness_eer53ax> (both 2026-10-13 attempts had answered HTTP 500,
+and which process created the page is unknown), and an MCPRush listing at
+<https://mcprush.com/alipajand/agent-readiness-mcp> that MCPRush indexed from npm on its own and
+announced by email the same day. The MCPRush listing was not submitted by the owner and shows its
+publisher as not claimed. The owner claimed it later that day by signing in with GitHub; the claim
+(CLM-0669) is pending MCPRush's review. Details are in [PUBLISHING-MATRIX.md](../PUBLISHING-MATRIX.md).
 
 ## Disclosures every listing carries
 
@@ -75,6 +83,10 @@ The last sentence matters on Glama, which already lists an unrelated "Agent Read
 scans websites.
 
 ## 1. mcpserver.dev
+
+Status on 2026-10-14: listed at <https://mcpserver.dev/s/agent-readiness_eer53ax>. Both
+submissions on 2026-10-13 answered HTTP 500, so it is not known which process created the page. Do
+not submit again. The material below is kept as it was used.
 
 Process: the **Submit a server** button on <https://mcpserver.dev> opens a form for a public
 repository or page, reviewed before listing. No account was required to open it.
@@ -311,8 +323,8 @@ tested.
 
 ## Owner actions, in order
 
-1. mcpserver.dev: submitted twice on 2026-10-13, both answered HTTP 500. Recheck whether either
-   was recorded before trying again.
+1. mcpserver.dev: submitted twice on 2026-10-13, both answered HTTP 500; a public page was found
+   on 2026-10-14 (origin unknown). Nothing further; do not resubmit.
 2. Glama: submitted 2026-10-13, awaiting review.
 3. Done: the coordinated 0.1.2 release (tag, GitHub release, npm, MCP Registry).
 4. Anthropic: submitted 2026-10-13 from tag `integrations-v0.1.2`, scanning. Answer any requested
