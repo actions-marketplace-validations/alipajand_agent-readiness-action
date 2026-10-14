@@ -10,12 +10,12 @@ four destinations that day. Current states, as recorded in
 | 1     | mcpserver.dev              | **PUBLISHED** — origin unknown  | Nothing; do not resubmit                                          | None; listed despite the two HTTP 500 answers                 |
 | 2     | Glama                      | **SUBMITTED — Awaiting review** | Await review; follow Glama's Dockerfile instructions if requested | None                                                          |
 | 3     | Anthropic plugin directory | **SUBMITTED — Scanning**        | Await the scan; answer any requested changes                      | None                                                          |
-| 4     | Cursor Marketplace         | **READY**                       | Cursor sign-in; submit at the publish page                        | None; the acceptance test passed 2026-10-13, including step 6 |
+| 4     | Cursor Marketplace         | **SUBMITTED — Awaiting review** | Await Cursor's email; answer any requested changes                | None; the acceptance test passed 2026-10-13, including step 6 |
 
 The plugin fixes for blockers 3 and 4 are released in integrations 0.1.2 (tag
 `integrations-v0.1.2`, npm and MCP Registry 0.1.2). The Cursor acceptance test, including the
-fail-closed denial path (step 6), passed on 2026-10-13; what remains for the Cursor Marketplace
-is the owner's submission.
+fail-closed denial path (step 6), passed on 2026-10-13; the application was submitted on
+2026-10-13 and awaits Cursor's review.
 
 Found on 2026-10-14 and not part of this plan: the public mcpserver.dev page
 <https://mcpserver.dev/s/agent-readiness_eer53ax> (both 2026-10-13 attempts had answered HTTP 500,
@@ -286,7 +286,7 @@ In Cursor, step 5 passes only if the answer gives these values.
 Signed-in Cursor 3.24.12 on macOS, Node.js 24.11.0, with the plugin exported from tag
 `integrations-v0.1.2` and copied (no symlinks) to `~/.cursor/plugins/local/agent-readiness`. The
 fixture was built as in step 3. In this first session everything passed except step 6, which could
-not run; the second session below completes it, and the Cursor Marketplace is **READY**.
+not run; the second session below completes it, and the Cursor Marketplace was then **READY** and submitted.
 
 | Step                  | Result                                                                                                                                                                                                 |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -330,6 +330,7 @@ tested.
 4. Anthropic: submitted 2026-10-13 from tag `integrations-v0.1.2`, scanning. Answer any requested
    changes.
 5. Cursor: the acceptance checklist passed on 0.1.2, including step 6 (denied run) with command
-   approval required. Submit at <https://cursor.com/marketplace/publish>. Steps 9 (MCP in Cursor) and
-   Windows remain untested.
+   approval required. Submitted 2026-10-13 at <https://cursor.com/marketplace/publish> (repository
+   URL only; the portal confirmed receipt, with no validation result). Await Cursor's email and
+   answer any requested changes. Step 9 (MCP in Cursor) and Windows remain untested.
 6. After each listing appears, open a documentation PR updating `docs/PUBLISHING-MATRIX.md`.

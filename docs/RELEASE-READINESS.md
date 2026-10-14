@@ -129,7 +129,7 @@ planted credentials, so an engine update that dropped its masking would fail CI.
 
 ## Remaining blockers
 
-| Blocker       | Severity                    | Evidence                     | Owner action                                                           |
-| ------------- | --------------------------- | ---------------------------- | ---------------------------------------------------------------------- |
-| Cursor plugin | Owner step only             | Acceptance passed 2026-10-13 | Submit at the Cursor Marketplace publish page                          |
-| Windows       | Only if listed as supported | Not tested                   | Run the skill script and the MCP server once, or keep Windows unlisted |
+| Blocker       | Severity                    | Evidence                                           | Owner action                                                           |
+| ------------- | --------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------- |
+| Cursor plugin | Awaiting Cursor's review    | Acceptance passed 2026-10-13; submitted 2026-10-13 | Await Cursor's email; not listed yet                                   |
+| Windows       | Only if listed as supported | Not tested                                         | Run the skill script and the MCP server once, or keep Windows unlisted |
