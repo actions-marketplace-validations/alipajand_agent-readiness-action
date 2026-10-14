@@ -125,7 +125,7 @@ planted credentials, so an engine update that dropped its masking would fail CI.
 | Guild.ai Agent Hub         | Sandbox cannot run the engines; no workflow dispatch or artifact download | None now; revisit per `docs/integrations/GUILD-FEASIBILITY.md`                                                                           |
 | agent-hub.dev              | No submission mechanism                                                   | Recheck later                                                                                                                            |
 | Anthropic plugin directory | Paid claude.ai plan                                                       | Submit at <https://claude.ai/directory/manage>. The signed-in Claude Code live tests passed; the directory itself has not been submitted |
-| Glama, mcpserver.dev       | None; the npm package is published                                        | Optional submissions                                                                                                                     |
+| Glama                      | None; the npm package is published                                        | Optional submission                                                                                                                      |
 
 ## Remaining blockers
 
