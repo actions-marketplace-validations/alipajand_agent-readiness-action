@@ -22,7 +22,8 @@ Found on 2026-10-14 and not part of this plan: the public mcpserver.dev page
 and which process created the page is unknown), and an MCPRush listing at
 <https://mcprush.com/alipajand/agent-readiness-mcp> that MCPRush indexed from npm on its own and
 announced by email the same day. The MCPRush listing was not submitted by the owner and shows its
-publisher as not claimed. Details are in [PUBLISHING-MATRIX.md](../PUBLISHING-MATRIX.md).
+publisher as not claimed. The owner claimed it later that day by signing in with GitHub; the claim
+(CLM-0669) is pending MCPRush's review. Details are in [PUBLISHING-MATRIX.md](../PUBLISHING-MATRIX.md).
 
 ## Disclosures every listing carries
 
