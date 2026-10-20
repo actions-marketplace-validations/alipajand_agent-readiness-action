@@ -45,7 +45,7 @@ const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(impo
 var external_node_path_default = /*#__PURE__*/__nccwpck_require__.n(external_node_path_namespaceObject);
 ;// CONCATENATED MODULE: external "node:url"
 const external_node_url_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:url");
-;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.2.0/node_modules/@modelcontextprotocol/server/dist/chunk-Br0eD_fh.mjs
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.3.1/node_modules/@modelcontextprotocol/server/dist/chunk-Br0eD_fh.mjs
 //#region rolldown:runtime
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -88,7 +88,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 
 //#endregion
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.2.0/node_modules/@modelcontextprotocol/server/dist/dialects-DoSzNhcb.mjs
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.3.1/node_modules/@modelcontextprotocol/server/dist/dialects-DoSzNhcb.mjs
 //#region ../core-internal/src/validators/dialects.ts
 /**
 * Canonical `$schema` URIs per supported dialect (http + https variants, trailing-`#` stripped).
@@ -123,7 +123,7 @@ function declaredDialect(schema, remedy) {
 //#endregion
 
 //# sourceMappingURL=dialects-DoSzNhcb.mjs.map
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/util.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js
 
 // functions
 function assertEqual(val) {
@@ -676,6 +676,20 @@ function unwrapMessage(message) {
     return typeof message === "string" ? message : message?.message;
 }
 /* A check holds no link back to the schema it is attached to — the same check instance is shared by every clone of that schema — so the owner is stamped onto the issues a check just raised, at the only point where both are in scope. Runs on the failure path only; `start` is the issue count from before the check ran. */
+/** The leading size checks of `defChecks` that set an upper bound, each paired with it. */
+function sizeCaps(defChecks) {
+    const caps = [];
+    for (const ch of defChecks ?? []) {
+        const d = ch._zod.def;
+        // a later check may rewrite the value
+        if (!/_(length|size)$|_equals$/.test(d.check))
+            break;
+        const max = d.maximum ?? d.length ?? d.size;
+        if (max >= 0)
+            caps.push([max, ch]);
+    }
+    return caps;
+}
 function attachSchema(issues, start, inst) {
     var _a;
     for (let i = start; i < issues.length; i++) {
@@ -984,7 +998,7 @@ function constantCatch(value) {
     return fn;
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/core.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/core.js
 var _a;
 
 /** A special constant with type `never` */
@@ -1127,7 +1141,7 @@ function config(newConfig) {
     return globalConfig;
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/memoizer.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/memoizer.js
 
 class $ZodCyclicError extends Error {
     constructor() {
@@ -1440,7 +1454,7 @@ function isBackEdge(ctx, value) {
     return backEdges !== undefined && isRef(value) && backEdges.has(value);
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/regexes.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js
 
 /**
  * @deprecated CUID v1 is deprecated by its authors due to information leakage
@@ -1598,7 +1612,7 @@ const sha512_hex = /^[0-9a-fA-F]{128}$/;
 const sha512_base64 = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64(86, "==")));
 const sha512_base64url = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64url(86)));
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/checks.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/checks.js
 // import { $ZodType } from "./schemas.js";
 
 
@@ -2116,7 +2130,7 @@ const $ZodCheckOverwrite = /*@__PURE__*/ $constructor("$ZodCheckOverwrite", (ins
     };
 });
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/doc.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/doc.js
 class Doc {
     constructor(args = [], closed = {}) {
         this.content = [];
@@ -2156,14 +2170,14 @@ class Doc {
     }
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/versions.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/versions.js
 const version = {
     major: 4,
     minor: 6,
-    patch: 5,
+    patch: 7,
 };
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/schemas.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/schemas.js
 
 
 
@@ -2982,6 +2996,33 @@ const $ZodDate = /*@__PURE__*/ $constructor("$ZodDate", (inst, def) => {
         return payload;
     };
 });
+// an oversized container fails its leading size checks before any element is parsed
+function capSize(inst, size) {
+    const caps = sizeCaps(inst._zod.def.checks);
+    if (!caps.length)
+        return;
+    const cap = Math.min(...caps.map((c) => c[0]));
+    const parse = inst._zod.parse;
+    inst._zod.parse = (payload, ctx) => {
+        const n = size(payload.value);
+        if (n > cap && !ctx?.skipChecks && ctx?.direction !== "backward") {
+            for (const [max, ch] of sizeCaps(inst._zod.def.checks)) {
+                if (n > max && ch._zod.def.when(payload)) {
+                    const start = payload.issues.length;
+                    ch._zod.check(payload);
+                    // the value is still the raw input, so no later check may read it
+                    payload.issues[start].continue = false;
+                    attachSchema(payload.issues, start, inst);
+                    return payload;
+                }
+            }
+        }
+        return parse(payload, ctx);
+    };
+}
+const arraySize = (input) => (Array.isArray(input) ? input.length : -1);
+const mapSize = (input) => (input instanceof Map ? input.size : -1);
+const setSize = (input) => (input instanceof Set ? input.size : -1);
 function handleArrayResult(result, final, index) {
     if (result.issues.length) {
         final.issues.push(...prefixIssues(index, result.issues));
@@ -3027,6 +3068,7 @@ const $ZodArray = /*@__PURE__*/ $constructor("$ZodArray", (inst, def) => {
         }
         return payload; //handleArrayResultsAsync(parseResults, final);
     };
+    capSize(inst, arraySize);
 });
 function handlePropertyResult(result, final, key, input, optin, optout) {
     const isPresent = key in input;
@@ -4064,6 +4106,7 @@ const $ZodMap = /*@__PURE__*/ (/* unused pure expression or super */ null && (co
             return Promise.all(proms).then(() => payload);
         return payload;
     };
+    capSize(inst, mapSize);
 })));
 function handleMapResult(keyResult, valueResult, final, key, input, inst, ctx) {
     if (keyResult.issues.length) {
@@ -4133,6 +4176,7 @@ const $ZodSet = /*@__PURE__*/ (/* unused pure expression or super */ null && (co
             return Promise.all(proms).then(() => payload);
         return payload;
     };
+    capSize(inst, setSize);
 })));
 function handleSetResult(result, final) {
     if (result.issues.length) {
@@ -4771,7 +4815,7 @@ function handleRefineResult(result, payload, input, inst) {
     }
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/registries.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/registries.js
 var registries_a;
 const $output = /*@__PURE__*/ (/* unused pure expression or super */ null && (Symbol("ZodOutput")));
 const $input = /*@__PURE__*/ (/* unused pure expression or super */ null && (Symbol("ZodInput")));
@@ -4824,7 +4868,7 @@ function registry() {
 (registries_a = globalThis).__zod_globalRegistry ?? (registries_a.__zod_globalRegistry = registry());
 const globalRegistry = globalThis.__zod_globalRegistry;
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/api.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/api.js
 
 
 
@@ -5929,7 +5973,7 @@ function _stringFormat(Class, format, fnOrRegex, _params = {}) {
     return inst;
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/to-json-schema.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/to-json-schema.js
 
 
 function assignProps(target, ...sources) {
@@ -6582,7 +6626,7 @@ const createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params)
     return finalize(ctx, schema);
 };
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/json-schema-processors.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/json-schema-processors.js
 
 
 
@@ -7427,7 +7471,7 @@ function toJSONSchema(input, params) {
     return finalize(ctx, input);
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/en.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/locales/en.js
 
 const error = () => {
     const Sizable = {
@@ -7554,7 +7598,7 @@ const error = () => {
     };
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/errors.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/errors.js
 
 
 /* Computing the message eagerly is expensive (pretty-printed JSON of all
@@ -7823,7 +7867,7 @@ function prettifyError(error) {
     return lines.join("\n");
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/parse.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/parse.js
 
 
 
@@ -8000,7 +8044,7 @@ const _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
 };
 const safeDecodeAsync = /* @__PURE__*/ _safeDecodeAsync($ZodRealError);
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/errors.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/errors.js
 
 
 
@@ -8059,7 +8103,7 @@ const ZodRealError = /*@__PURE__*/ $constructor("ZodError", errors_initializer, 
 // /** @deprecated Use `z.core.$ZodErrorMapCtx` instead. */
 // export type ErrorMapCtx = core.$ZodErrorMapCtx;
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/parse.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/parse.js
 
 
 const classic_parse_parse = /* @__PURE__ */ _parse(ZodRealError);
@@ -8077,7 +8121,7 @@ const parse_safeDecode = /* @__PURE__ */ _safeDecode(ZodRealError);
 const parse_safeEncodeAsync = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
 const parse_safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/schemas.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/schemas.js
 
 
 
@@ -9614,7 +9658,7 @@ function preprocess(fn, schema) {
     });
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/iso.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/iso.js
 
 
 
@@ -9631,7 +9675,7 @@ function iso_duration(params) {
     return core._isoDuration(ZodISODuration, params);
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/compat.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/compat.js
 // Zod 3 compat layer
 
 /** @deprecated Use the raw string literal codes instead, e.g. "invalid_type". */
@@ -9664,7 +9708,7 @@ var ZodFirstPartyTypeKind;
 (function (ZodFirstPartyTypeKind) {
 })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/coerce.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/coerce.js
 
 
 function coerce_string(params) {
@@ -9683,7 +9727,7 @@ function coerce_date(params) {
     return core._coercedDate(schemas.ZodDate, params);
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+core@2.2.0/node_modules/@modelcontextprotocol/core/dist/auth-BNDyLTqp.mjs
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+core@2.3.1/node_modules/@modelcontextprotocol/core/dist/auth-BNDyLTqp.mjs
 
 
 //#region src/constants.ts
@@ -11365,11 +11409,11 @@ const OAuthTokenRevocationRequestSchema = object({
 //#endregion
 
 //# sourceMappingURL=auth-BNDyLTqp.mjs.map
-;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+core@2.2.0/node_modules/@modelcontextprotocol/core/dist/internal.mjs
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+core@2.3.1/node_modules/@modelcontextprotocol/core/dist/internal.mjs
 
 
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.2.0/node_modules/@modelcontextprotocol/server/dist/src-BHSMhZ_W.mjs
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.3.1/node_modules/@modelcontextprotocol/server/dist/src-Cqbh3MYc.mjs
 
 
 
@@ -11472,7 +11516,7 @@ function brandedHasInstance(cls, value) {
 * OAuth error codes as defined by {@link https://datatracker.ietf.org/doc/html/rfc6749#section-5.2 | RFC 6749}
 * and extensions.
 */
-let src_BHSMhZ_W_OAuthErrorCode = /* @__PURE__ */ function(OAuthErrorCode$1) {
+let src_Cqbh3MYc_OAuthErrorCode = /* @__PURE__ */ function(OAuthErrorCode$1) {
 	/**
 	* The request is missing a required parameter, includes an invalid parameter value,
 	* includes a parameter more than once, or is otherwise malformed.
@@ -11563,7 +11607,7 @@ let src_BHSMhZ_W_OAuthErrorCode = /* @__PURE__ */ function(OAuthErrorCode$1) {
 /**
 * OAuth error class for all OAuth-related errors.
 */
-var src_BHSMhZ_W_OAuthError = class OAuthError extends Error {
+var src_Cqbh3MYc_OAuthError = class OAuthError extends Error {
 	static {
 		Object.defineProperty(this, "mcpBrand", { value: "mcp.OAuthError" });
 	}
@@ -11619,7 +11663,7 @@ var src_BHSMhZ_W_OAuthError = class OAuthError extends Error {
 * These errors are thrown locally by the SDK and are never serialized as
 * JSON-RPC error responses.
 */
-let src_BHSMhZ_W_SdkErrorCode = /* @__PURE__ */ function(SdkErrorCode$1) {
+let src_Cqbh3MYc_SdkErrorCode = /* @__PURE__ */ function(SdkErrorCode$1) {
 	/** Transport is not connected */
 	SdkErrorCode$1["NotConnected"] = "NOT_CONNECTED";
 	/** Transport is already connected */
@@ -11721,7 +11765,7 @@ let src_BHSMhZ_W_SdkErrorCode = /* @__PURE__ */ function(SdkErrorCode$1) {
 * }
 * ```
 */
-var src_BHSMhZ_W_SdkError = class extends Error {
+var src_Cqbh3MYc_SdkError = class extends Error {
 	static {
 		Object.defineProperty(this, "mcpBrand", { value: "mcp.SdkError" });
 	}
@@ -11775,7 +11819,7 @@ var src_BHSMhZ_W_SdkError = class extends Error {
 * }
 * ```
 */
-var SdkHttpError = class extends src_BHSMhZ_W_SdkError {
+var SdkHttpError = class extends src_Cqbh3MYc_SdkError {
 	static {
 		Object.defineProperty(this, "mcpBrand", { value: "mcp.SdkHttpError" });
 	}
@@ -11849,7 +11893,7 @@ const REQUIRED_CLIENT_CAPABILITIES_BY_METHOD = {};
 * The client capabilities a request method structurally requires, or
 * `undefined` when the method has no static requirement.
 */
-function src_BHSMhZ_W_requiredClientCapabilitiesForRequest(method) {
+function src_Cqbh3MYc_requiredClientCapabilitiesForRequest(method) {
 	return Object.hasOwn(REQUIRED_CLIENT_CAPABILITIES_BY_METHOD, method) ? REQUIRED_CLIENT_CAPABILITIES_BY_METHOD[method] : void 0;
 }
 function isPlainObject$7(value) {
@@ -11912,7 +11956,7 @@ function requiredClientCapabilitiesForInputRequest(entry) {
 * nothing is declared — every required capability is missing (the structural
 * clean-refusal posture for sessions with no per-request capability view).
 */
-function src_BHSMhZ_W_missingClientCapabilities(required, declared) {
+function src_Cqbh3MYc_missingClientCapabilities(required, declared) {
 	const missing = {};
 	for (const [capability, requirement] of Object.entries(required)) {
 		if (requirement === void 0) continue;
@@ -11943,7 +11987,7 @@ const FIRST_MODERN_PROTOCOL_VERSION = "2026-07-28";
 * `initialize` list), so adding a revision here can never leak a modern version
 * string into a 2025-era handshake. Internal — not part of the public API surface.
 */
-const src_BHSMhZ_W_SUPPORTED_MODERN_PROTOCOL_VERSIONS = [FIRST_MODERN_PROTOCOL_VERSION];
+const src_Cqbh3MYc_SUPPORTED_MODERN_PROTOCOL_VERSIONS = [FIRST_MODERN_PROTOCOL_VERSION];
 /** Whether the given protocol revision belongs to the modern (2026-07-28+) era. */
 function isModernProtocolVersion(version) {
 	return version >= FIRST_MODERN_PROTOCOL_VERSION;
@@ -14536,7 +14580,7 @@ function build() {
 	const subscriptionsListenParamsShape = { notifications: SubscriptionFilterSchema$1 };
 	const SubscriptionsListenRequestSchema$1 = wireRequest("subscriptions/listen", subscriptionsListenParamsShape);
 	/**
-	* Anchor SubscriptionsListenResultMeta — required subscriptionId stamp on
+	* Anchor SubscriptionsListenResultMetaObject — required subscriptionId stamp on
 	* the graceful-close result. Extends `ResultMetaObject` since spec PR
 	* #3002 (composed, so the serverInfo key and its leniency stay single-sourced).
 	*/
@@ -14809,10 +14853,11 @@ function build() {
 		ListResourceTemplatesResultResponseSchema: wireResultResponse(ListResourceTemplatesResultSchema$1),
 		ReadResourceResultResponseSchema: wireResultResponse(union([ReadResourceResultSchema$1, InputRequiredResultSchema])),
 		CompleteResultResponseSchema: wireResultResponse(CompleteResultSchema$1),
-		DiscoverResultResponseSchema: wireResultResponse(DiscoverResultSchema$1)
+		DiscoverResultResponseSchema: wireResultResponse(DiscoverResultSchema$1),
+		SubscriptionsListenResultResponseSchema: wireResultResponse(SubscriptionsListenResultSchema$1)
 	};
 }
-let src_BHSMhZ_W_memo;
+let src_Cqbh3MYc_memo;
 /**
 * Builds the era wire-schema set on first call and returns the same object
 * thereafter. Module evaluation stays construction-free so importing the
@@ -14822,7 +14867,7 @@ let src_BHSMhZ_W_memo;
 * every consumer.
 */
 function buildSchemas2026() {
-	return src_BHSMhZ_W_memo ??= build();
+	return src_Cqbh3MYc_memo ??= build();
 }
 
 //#endregion
@@ -14910,7 +14955,7 @@ function assertValidCacheHint(hint, context) {
 * Error codes for protocol errors that cross the wire as JSON-RPC error responses.
 * These follow the JSON-RPC specification and MCP-specific extensions.
 */
-let src_BHSMhZ_W_ProtocolErrorCode = /* @__PURE__ */ function(ProtocolErrorCode$1) {
+let src_Cqbh3MYc_ProtocolErrorCode = /* @__PURE__ */ function(ProtocolErrorCode$1) {
 	ProtocolErrorCode$1[ProtocolErrorCode$1["ParseError"] = -32700] = "ParseError";
 	ProtocolErrorCode$1[ProtocolErrorCode$1["InvalidRequest"] = -32600] = "InvalidRequest";
 	ProtocolErrorCode$1[ProtocolErrorCode$1["MethodNotFound"] = -32601] = "MethodNotFound";
@@ -14984,24 +15029,24 @@ var ProtocolError = class ProtocolError extends Error {
 	* Factory method to create the appropriate error type based on the error code and data
 	*/
 	static fromError(code, message, data) {
-		if (code === src_BHSMhZ_W_ProtocolErrorCode.UrlElicitationRequired && data) {
+		if (code === src_Cqbh3MYc_ProtocolErrorCode.UrlElicitationRequired && data) {
 			const errorData = data;
 			if (errorData.elicitations) return new UrlElicitationRequiredError(errorData.elicitations, message);
 		}
-		if (code === src_BHSMhZ_W_ProtocolErrorCode.UnsupportedProtocolVersion && data) {
+		if (code === src_Cqbh3MYc_ProtocolErrorCode.UnsupportedProtocolVersion && data) {
 			const errorData = data;
-			if (Array.isArray(errorData.supported) && typeof errorData.requested === "string") return new src_BHSMhZ_W_UnsupportedProtocolVersionError({
+			if (Array.isArray(errorData.supported) && typeof errorData.requested === "string") return new src_Cqbh3MYc_UnsupportedProtocolVersionError({
 				supported: errorData.supported,
 				requested: errorData.requested
 			}, message);
 		}
-		if (code === src_BHSMhZ_W_ProtocolErrorCode.InvalidParams || code === src_BHSMhZ_W_ProtocolErrorCode.ResourceNotFound) {
+		if (code === src_Cqbh3MYc_ProtocolErrorCode.InvalidParams || code === src_Cqbh3MYc_ProtocolErrorCode.ResourceNotFound) {
 			const errorData = data;
-			if (typeof errorData?.uri === "string" && (code === src_BHSMhZ_W_ProtocolErrorCode.ResourceNotFound || Object.keys(errorData).length === 1)) return new ResourceNotFoundError(errorData.uri, message);
+			if (typeof errorData?.uri === "string" && (code === src_Cqbh3MYc_ProtocolErrorCode.ResourceNotFound || Object.keys(errorData).length === 1)) return new ResourceNotFoundError(errorData.uri, message);
 		}
-		if (code === src_BHSMhZ_W_ProtocolErrorCode.MissingRequiredClientCapability && data) {
+		if (code === src_Cqbh3MYc_ProtocolErrorCode.MissingRequiredClientCapability && data) {
 			const errorData = data;
-			if (errorData.requiredCapabilities !== null && typeof errorData.requiredCapabilities === "object" && !Array.isArray(errorData.requiredCapabilities)) return new src_BHSMhZ_W_MissingRequiredClientCapabilityError({ requiredCapabilities: errorData.requiredCapabilities }, message);
+			if (errorData.requiredCapabilities !== null && typeof errorData.requiredCapabilities === "object" && !Array.isArray(errorData.requiredCapabilities)) return new src_Cqbh3MYc_MissingRequiredClientCapabilityError({ requiredCapabilities: errorData.requiredCapabilities }, message);
 		}
 		return new ProtocolError(code, message, data);
 	}
@@ -15027,7 +15072,7 @@ var ResourceNotFoundError = class extends ProtocolError {
 		Object.defineProperty(this, "mcpBrand", { value: "mcp.ResourceNotFoundError" });
 	}
 	constructor(uri, message = `Resource not found: ${uri}`) {
-		super(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, message, { uri });
+		super(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, message, { uri });
 	}
 	/** The URI that was requested and not found. */
 	get uri() {
@@ -15043,7 +15088,7 @@ var UrlElicitationRequiredError = class extends ProtocolError {
 		Object.defineProperty(this, "mcpBrand", { value: "mcp.UrlElicitationRequiredError" });
 	}
 	constructor(elicitations, message = `URL elicitation${elicitations.length > 1 ? "s" : ""} required`) {
-		super(src_BHSMhZ_W_ProtocolErrorCode.UrlElicitationRequired, message, { elicitations });
+		super(src_Cqbh3MYc_ProtocolErrorCode.UrlElicitationRequired, message, { elicitations });
 	}
 	get elicitations() {
 		return this.data?.elicitations ?? [];
@@ -15058,12 +15103,12 @@ var UrlElicitationRequiredError = class extends ProtocolError {
 * so the sender can choose a mutually supported version and retry, and echoes the
 * version that was requested (`requested`).
 */
-var src_BHSMhZ_W_UnsupportedProtocolVersionError = class extends ProtocolError {
+var src_Cqbh3MYc_UnsupportedProtocolVersionError = class extends ProtocolError {
 	static {
 		Object.defineProperty(this, "mcpBrand", { value: "mcp.UnsupportedProtocolVersionError" });
 	}
 	constructor(data, message = `Unsupported protocol version: ${data.requested}`) {
-		super(src_BHSMhZ_W_ProtocolErrorCode.UnsupportedProtocolVersion, message, data);
+		super(src_Cqbh3MYc_ProtocolErrorCode.UnsupportedProtocolVersion, message, data);
 	}
 	/**
 	* Protocol versions the receiver supports.
@@ -15092,12 +15137,12 @@ var src_BHSMhZ_W_UnsupportedProtocolVersionError = class extends ProtocolError {
 * `instanceof` — checks are brand-matched and work across separately bundled
 * copies of the SDK.
 */
-var src_BHSMhZ_W_MissingRequiredClientCapabilityError = class extends ProtocolError {
+var src_Cqbh3MYc_MissingRequiredClientCapabilityError = class extends ProtocolError {
 	static {
 		Object.defineProperty(this, "mcpBrand", { value: "mcp.MissingRequiredClientCapabilityError" });
 	}
 	constructor(data, message = `Missing required client capabilities: ${Object.keys(data.requiredCapabilities).join(", ")}`) {
-		super(src_BHSMhZ_W_ProtocolErrorCode.MissingRequiredClientCapability, message, data);
+		super(src_Cqbh3MYc_ProtocolErrorCode.MissingRequiredClientCapability, message, data);
 	}
 	/**
 	* The capabilities the server requires from the client to process the
@@ -15150,7 +15195,7 @@ function stampResultType(method, result) {
 	};
 	if (provided === "complete") return result;
 	if (EXTENDED_RESULT_TYPE_METHODS.includes(method)) return result;
-	throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `Handler for ${method} returned resultType '${String(provided)}', but results of ${method} only support 'complete' on protocol revision 2026-07-28`);
+	throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `Handler for ${method} returned resultType '${String(provided)}', but results of ${method} only support 'complete' on protocol revision 2026-07-28`);
 }
 /**
 * Step 2 of the encode contract: fill the required `ttlMs`/`cacheScope` fields
@@ -15450,19 +15495,19 @@ const rev2026Codec = {
 	decodeResult(method, raw) {
 		if (!isPlainObject$4(raw)) return {
 			kind: "invalid",
-			error: new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.InvalidResult, `Invalid result for ${method}: not an object`, { method })
+			error: new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.InvalidResult, `Invalid result for ${method}: not an object`, { method })
 		};
 		const rawResultType = raw["resultType"];
 		if (rawResultType === void 0) return {
 			kind: "invalid",
-			error: new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.InvalidResult, `Invalid result for ${method}: missing required resultType — servers implementing protocol revision 2026-07-28 MUST include it (the absent-means-complete bridge applies only to earlier-revision servers)`, {
+			error: new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.InvalidResult, `Invalid result for ${method}: missing required resultType — servers implementing protocol revision 2026-07-28 MUST include it (the absent-means-complete bridge applies only to earlier-revision servers)`, {
 				method,
 				violation: "missing-resultType"
 			})
 		};
 		if (typeof rawResultType !== "string") return {
 			kind: "invalid",
-			error: new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.InvalidResult, `Invalid result for ${method}: non-string resultType`, {
+			error: new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.InvalidResult, `Invalid result for ${method}: non-string resultType`, {
 				method,
 				resultType: rawResultType
 			})
@@ -15475,7 +15520,7 @@ const rev2026Codec = {
 			const meta = metaParse?.success ? metaParse.data : void 0;
 			if (Object.keys(inputRequests).length === 0 && typeof requestState !== "string") return {
 				kind: "invalid",
-				error: new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.InvalidResult, `Invalid result for ${method}: input_required carries neither inputRequests nor requestState (every input_required result must include at least one of the two)`, {
+				error: new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.InvalidResult, `Invalid result for ${method}: input_required carries neither inputRequests nor requestState (every input_required result must include at least one of the two)`, {
 					method,
 					violation: "input-required-missing-both"
 				})
@@ -15489,7 +15534,7 @@ const rev2026Codec = {
 		}
 		if (rawResultType !== "complete") return {
 			kind: "invalid",
-			error: new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.UnsupportedResultType, `Unsupported result type '${rawResultType}' for ${method}`, {
+			error: new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.UnsupportedResultType, `Unsupported result type '${rawResultType}' for ${method}`, {
 				resultType: rawResultType,
 				method
 			})
@@ -15500,7 +15545,7 @@ const rev2026Codec = {
 			const parsed = wireSchema.safeParse(raw);
 			if (!parsed.success) return {
 				kind: "invalid",
-				error: new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.InvalidResult, `Invalid result for ${method}: ${parsed.error}`, { method })
+				error: new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.InvalidResult, `Invalid result for ${method}: ${parsed.error}`, { method })
 			};
 		}
 		const lifted = { ...raw };
@@ -15554,7 +15599,7 @@ function warmWireResultSchemas2026() {
 * constant (G-D2-4: no public modern-version constant ships before era-aware
 * list semantics exist).
 */
-const src_BHSMhZ_W_MODERN_WIRE_REVISION = "2026-07-28";
+const src_Cqbh3MYc_MODERN_WIRE_REVISION = "2026-07-28";
 /**
 * Era resolution, many-to-one (Q1-SD1): every modern-era revision
 * (`>= 2026-07-28`) → the 2026-era codec; every legacy revision (the five
@@ -15564,7 +15609,7 @@ const src_BHSMhZ_W_MODERN_WIRE_REVISION = "2026-07-28";
 * rest of the SDK uses ({@link isModernProtocolVersion}); a pinned modern
 * revision other than the literal '2026-07-28' must still resolve modern.
 */
-function src_BHSMhZ_W_codecForVersion(version) {
+function src_Cqbh3MYc_codecForVersion(version) {
 	return version !== void 0 && isModernProtocolVersion(version) ? rev2026Codec : rev2025Codec;
 }
 /**
@@ -15576,7 +15621,7 @@ function src_BHSMhZ_W_codecForVersion(version) {
 * exact `revision` wins over the coarse era flag when both are present.
 */
 function classifiedWireEra(classification) {
-	if (classification.revision !== void 0) return src_BHSMhZ_W_codecForVersion(classification.revision).era;
+	if (classification.revision !== void 0) return src_Cqbh3MYc_codecForVersion(classification.revision).era;
 	return classification.era === "modern" ? rev2026Codec.era : rev2025Codec.era;
 }
 /**
@@ -15591,6 +15636,10 @@ function isSpecRequestMethod(method) {
 }
 function isSpecNotificationMethod(method) {
 	return ALL_CODECS.some((codec) => codec.hasNotificationMethod(method));
+}
+/** The names SEP-2663 re-defines for the Tasks extension on the era that removed them from core. */
+function isExtensionReusedRequestMethod(method) {
+	return method === "tasks/get" || method === "tasks/cancel";
 }
 const ALL_CODECS = [rev2025Codec, rev2026Codec];
 
@@ -15621,7 +15670,7 @@ function isPlainObject$3(value) {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 /** The `_meta` object of a message's params, when present. */
-function src_BHSMhZ_W_requestMetaOf(params) {
+function src_Cqbh3MYc_requestMetaOf(params) {
 	if (!isPlainObject$3(params)) return void 0;
 	const meta = params["_meta"];
 	return isPlainObject$3(meta) ? meta : void 0;
@@ -15631,8 +15680,8 @@ function src_BHSMhZ_W_requestMetaOf(params) {
 * reserved protocol-version `_meta` key is present (regardless of whether the
 * rest of the envelope is valid — validation is a separate, later step).
 */
-function src_BHSMhZ_W_hasEnvelopeClaim(params) {
-	const meta = src_BHSMhZ_W_requestMetaOf(params);
+function src_Cqbh3MYc_hasEnvelopeClaim(params) {
+	const meta = src_Cqbh3MYc_requestMetaOf(params);
 	return meta !== void 0 && PROTOCOL_VERSION_META_KEY in meta;
 }
 /**
@@ -15641,8 +15690,8 @@ function src_BHSMhZ_W_hasEnvelopeClaim(params) {
 * still counts as a claim ({@linkcode hasEnvelopeClaim}); it surfaces as a
 * validation issue instead of a version.
 */
-function src_BHSMhZ_W_envelopeClaimVersion(params) {
-	const value = src_BHSMhZ_W_requestMetaOf(params)?.[PROTOCOL_VERSION_META_KEY];
+function src_Cqbh3MYc_envelopeClaimVersion(params) {
+	const value = src_Cqbh3MYc_requestMetaOf(params)?.[PROTOCOL_VERSION_META_KEY];
 	return typeof value === "string" ? value : void 0;
 }
 /**
@@ -15653,8 +15702,8 @@ function src_BHSMhZ_W_envelopeClaimVersion(params) {
 * reported first (as `problem: 'missing'`), then schema violations inside
 * present keys, in a stable order.
 */
-function src_BHSMhZ_W_validateEnvelopeMeta(meta) {
-	return src_BHSMhZ_W_codecForVersion(src_BHSMhZ_W_MODERN_WIRE_REVISION).validateEnvelopeMeta(meta);
+function src_Cqbh3MYc_validateEnvelopeMeta(meta) {
+	return src_Cqbh3MYc_codecForVersion(src_Cqbh3MYc_MODERN_WIRE_REVISION).validateEnvelopeMeta(meta);
 }
 
 //#endregion
@@ -15843,22 +15892,22 @@ var schemas_exports = /* @__PURE__ */ __exportAll({
 function parseJSONRPCMessage(value) {
 	return JSONRPCMessageSchema.parse(value);
 }
-const src_BHSMhZ_W_isJSONRPCRequest = (value) => JSONRPCRequestSchema.safeParse(value).success;
-const src_BHSMhZ_W_isJSONRPCNotification = (value) => JSONRPCNotificationSchema.safeParse(value).success;
+const src_Cqbh3MYc_isJSONRPCRequest = (value) => JSONRPCRequestSchema.safeParse(value).success;
+const src_Cqbh3MYc_isJSONRPCNotification = (value) => JSONRPCNotificationSchema.safeParse(value).success;
 /**
 * Checks if a value is a valid {@linkcode JSONRPCResultResponse}.
 * @param value - The value to check.
 *
 * @returns True if the value is a valid {@linkcode JSONRPCResultResponse}, false otherwise.
 */
-const src_BHSMhZ_W_isJSONRPCResultResponse = (value) => JSONRPCResultResponseSchema.safeParse(value).success;
+const src_Cqbh3MYc_isJSONRPCResultResponse = (value) => JSONRPCResultResponseSchema.safeParse(value).success;
 /**
 * Checks if a value is a valid {@linkcode JSONRPCErrorResponse}.
 * @param value - The value to check.
 *
 * @returns True if the value is a valid {@linkcode JSONRPCErrorResponse}, false otherwise.
 */
-const src_BHSMhZ_W_isJSONRPCErrorResponse = (value) => JSONRPCErrorResponseSchema.safeParse(value).success;
+const src_Cqbh3MYc_isJSONRPCErrorResponse = (value) => JSONRPCErrorResponseSchema.safeParse(value).success;
 /**
 * Checks if a value is a valid {@linkcode JSONRPCResponse} (either a result or error response).
 * @param value - The value to check.
@@ -15905,7 +15954,7 @@ const isInputRequiredResult = (value) => typeof value === "object" && value !== 
 * runtime; kept importable for interoperability only.
 */
 const isTaskAugmentedRequestParams = (value) => TaskAugmentedRequestParamsSchema.safeParse(value).success;
-const src_BHSMhZ_W_isInitializeRequest = (value) => InitializeRequestSchema.safeParse(value).success;
+const src_Cqbh3MYc_isInitializeRequest = (value) => InitializeRequestSchema.safeParse(value).success;
 const isInitializedNotification = (value) => InitializedNotificationSchema.safeParse(value).success;
 function assertCompleteRequestPrompt(request) {
 	if (request.params.ref.type !== "ref/prompt") throw new TypeError(`Expected CompleteRequestPrompt, but got ${request.params.ref.type}`);
@@ -15954,7 +16003,7 @@ const PERMITTED_X_MCP_HEADER_TYPES = new Set([
 * `x-mcp-header` found anywhere on that path invalidates the schema — "an
 * annotation anywhere else makes the tool definition invalid".
 */
-function src_BHSMhZ_W_scanXMcpHeaderDeclarations(inputSchema) {
+function src_Cqbh3MYc_scanXMcpHeaderDeclarations(inputSchema) {
 	const declarations = [];
 	const seenLower = /* @__PURE__ */ new Map();
 	const visit = (node, path, reachable) => {
@@ -16110,7 +16159,7 @@ function valueAtPath(root, path) {
 * standard-header cross-checks — `400 Bad Request` with the disagreeing pair
 * in `data.mismatch`.
 */
-function src_BHSMhZ_W_validateMcpParamHeaders(declarations, args, headers) {
+function src_Cqbh3MYc_validateMcpParamHeaders(declarations, args, headers) {
 	for (const decl of declarations) {
 		const headerKey = `${MCP_PARAM_HEADER_PREFIX}${decl.headerName}`;
 		const headerValue = headers.get(headerKey);
@@ -16258,7 +16307,7 @@ const INBOUND_VALIDATION_LADDER = [
 		rung: "jsonrpc-shape",
 		order: 2,
 		evaluatedAt: "edge",
-		codes: [src_BHSMhZ_W_ProtocolErrorCode.InvalidRequest],
+		codes: [src_Cqbh3MYc_ProtocolErrorCode.InvalidRequest],
 		conformance: ["server-stateless"],
 		rationale: "The body must be a JSON-RPC request or notification: posted responses and batch arrays containing a modern or invalid element are rejected before classification (element-wise batch rule); all-legacy arrays stay legacy traffic."
 	},
@@ -16266,7 +16315,7 @@ const INBOUND_VALIDATION_LADDER = [
 		rung: "era-classification",
 		order: 3,
 		evaluatedAt: "edge",
-		codes: [HEADER_MISMATCH_ERROR_CODE, src_BHSMhZ_W_ProtocolErrorCode.UnsupportedProtocolVersion],
+		codes: [HEADER_MISMATCH_ERROR_CODE, src_Cqbh3MYc_ProtocolErrorCode.UnsupportedProtocolVersion],
 		conformance: [
 			"server-stateless",
 			"http-header-validation",
@@ -16278,7 +16327,7 @@ const INBOUND_VALIDATION_LADDER = [
 		rung: "envelope",
 		order: 4,
 		evaluatedAt: "edge",
-		codes: [src_BHSMhZ_W_ProtocolErrorCode.InvalidParams],
+		codes: [src_Cqbh3MYc_ProtocolErrorCode.InvalidParams],
 		conformance: ["server-stateless"],
 		rationale: "A present envelope claim with a malformed envelope — and a missing envelope on a request whose protocol-version header names a modern revision — is an invalid-params rejection naming the offending or missing key(s); never a silent fall back to legacy handling. This is the only place an invalid-params rejection maps to HTTP 400."
 	},
@@ -16286,7 +16335,7 @@ const INBOUND_VALIDATION_LADDER = [
 		rung: "method-registry",
 		order: 5,
 		evaluatedAt: "dispatch",
-		codes: [src_BHSMhZ_W_ProtocolErrorCode.MethodNotFound],
+		codes: [src_Cqbh3MYc_ProtocolErrorCode.MethodNotFound],
 		conformance: ["server-stateless"],
 		rationale: "Method existence outranks parameter validity: a method absent from the negotiated revision’s registry (or with no handler installed) answers method-not-found before params or capabilities are looked at."
 	},
@@ -16294,7 +16343,7 @@ const INBOUND_VALIDATION_LADDER = [
 		rung: "request-params",
 		order: 6,
 		evaluatedAt: "dispatch",
-		codes: [src_BHSMhZ_W_ProtocolErrorCode.InvalidParams],
+		codes: [src_Cqbh3MYc_ProtocolErrorCode.InvalidParams],
 		conformance: [],
 		rationale: "Per-method params validation; emitted in-band by the dispatch layer (HTTP 200), never via the ladder status table."
 	},
@@ -16310,7 +16359,7 @@ const INBOUND_VALIDATION_LADDER = [
 		rung: "client-capabilities",
 		order: 8,
 		evaluatedAt: "pre-dispatch",
-		codes: [src_BHSMhZ_W_ProtocolErrorCode.MissingRequiredClientCapability],
+		codes: [src_Cqbh3MYc_ProtocolErrorCode.MissingRequiredClientCapability],
 		conformance: ["server-stateless"],
 		rationale: "The capability requirement is checked by the HTTP entry, pre-dispatch, against the validated envelope the classifier produced — pinning the spec-mandated HTTP 400 independently of how dispatch- and handler-produced errors are mapped. The documented order (after method resolution and params validation) is preserved observably only while the requirement table is empty: once a served method gains a requirement entry, a request that is missing the capability and would also fail a dispatch rung is answered by this gate first, so the entry must consult the method registry before the gate if the documented precedence is to stay observable."
 	},
@@ -16339,12 +16388,12 @@ const INBOUND_VALIDATION_LADDER = [
 * short-circuit, which carries its HTTP status directly. A dispatch- or
 * handler-produced invalid-params error is always in-band.
 */
-const src_BHSMhZ_W_LADDER_ERROR_HTTP_STATUS = {
-	[src_BHSMhZ_W_ProtocolErrorCode.ParseError]: 400,
-	[src_BHSMhZ_W_ProtocolErrorCode.InvalidRequest]: 400,
-	[src_BHSMhZ_W_ProtocolErrorCode.MethodNotFound]: 404,
-	[src_BHSMhZ_W_ProtocolErrorCode.UnsupportedProtocolVersion]: 400,
-	[src_BHSMhZ_W_ProtocolErrorCode.MissingRequiredClientCapability]: 400,
+const src_Cqbh3MYc_LADDER_ERROR_HTTP_STATUS = {
+	[src_Cqbh3MYc_ProtocolErrorCode.ParseError]: 400,
+	[src_Cqbh3MYc_ProtocolErrorCode.InvalidRequest]: 400,
+	[src_Cqbh3MYc_ProtocolErrorCode.MethodNotFound]: 404,
+	[src_Cqbh3MYc_ProtocolErrorCode.UnsupportedProtocolVersion]: 400,
+	[src_Cqbh3MYc_ProtocolErrorCode.MissingRequiredClientCapability]: 400,
 	[HEADER_MISMATCH_ERROR_CODE]: 400
 };
 /**
@@ -16364,9 +16413,9 @@ const src_BHSMhZ_W_LADDER_ERROR_HTTP_STATUS = {
 * window `-32602` must stay in-band on 200). The transport indexes the table
 * directly; keep the two in agreement when editing either.
 */
-function src_BHSMhZ_W_httpStatusForErrorCode(code, origin) {
-	if (origin === "in-band") return code === src_BHSMhZ_W_ProtocolErrorCode.MissingRequiredClientCapability ? 400 : 200;
-	return src_BHSMhZ_W_LADDER_ERROR_HTTP_STATUS[code] ?? 400;
+function src_Cqbh3MYc_httpStatusForErrorCode(code, origin) {
+	if (origin === "in-band") return code === src_Cqbh3MYc_ProtocolErrorCode.MissingRequiredClientCapability ? 400 : 200;
+	return src_Cqbh3MYc_LADDER_ERROR_HTTP_STATUS[code] ?? 400;
 }
 function rejection(rung, cell, httpStatus, error, settled) {
 	return {
@@ -16487,7 +16536,7 @@ function stripHttpOws(value) {
 * rule — classification still resolves from the body (a proxy stripping the
 * header must not change the era), and only this rung refuses to serve it.
 */
-function src_BHSMhZ_W_validateStandardRequestHeaders(request, route) {
+function src_Cqbh3MYc_validateStandardRequestHeaders(request, route) {
 	if (route.messageKind !== "request") return;
 	const method = route.message.method;
 	if (request.protocolVersionHeader === void 0) {
@@ -16532,18 +16581,18 @@ function classificationForClaim(claimedVersion) {
 * applies the same precedence rule to a connection's opening message; not
 * public API.
 */
-function src_BHSMhZ_W_carriesValidModernEnvelopeClaim(params) {
-	if (!src_BHSMhZ_W_hasEnvelopeClaim(params)) return false;
-	const claimedVersion = src_BHSMhZ_W_envelopeClaimVersion(params);
+function src_Cqbh3MYc_carriesValidModernEnvelopeClaim(params) {
+	if (!src_Cqbh3MYc_hasEnvelopeClaim(params)) return false;
+	const claimedVersion = src_Cqbh3MYc_envelopeClaimVersion(params);
 	if (claimedVersion === void 0 || !isModernProtocolVersion(claimedVersion)) return false;
-	const meta = src_BHSMhZ_W_requestMetaOf(params);
-	return meta !== void 0 && src_BHSMhZ_W_validateEnvelopeMeta(meta).length === 0;
+	const meta = src_Cqbh3MYc_requestMetaOf(params);
+	return meta !== void 0 && src_Cqbh3MYc_validateEnvelopeMeta(meta).length === 0;
 }
 function classifyBatch(body) {
-	if (body.length === 0) return rejection("jsonrpc-shape", "empty-batch", 400, new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidRequest, "Bad Request: empty JSON-RPC batch"), true);
+	if (body.length === 0) return rejection("jsonrpc-shape", "empty-batch", 400, new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidRequest, "Bad Request: empty JSON-RPC batch"), true);
 	for (const element of body) {
-		if (src_BHSMhZ_W_hasEnvelopeClaim(isPlainObject$2(element) ? element["params"] : void 0)) return rejection("jsonrpc-shape", "batch-with-modern-element", 400, new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidRequest, "Bad Request: JSON-RPC batches may not contain requests for protocol revision 2026-07-28 or later"), true);
-		if (!(src_BHSMhZ_W_isJSONRPCRequest(element) || src_BHSMhZ_W_isJSONRPCNotification(element) || src_BHSMhZ_W_isJSONRPCResultResponse(element) || src_BHSMhZ_W_isJSONRPCErrorResponse(element))) return rejection("jsonrpc-shape", "batch-with-invalid-element", 400, new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidRequest, "Bad Request: JSON-RPC batch contains an invalid message"), true);
+		if (src_Cqbh3MYc_hasEnvelopeClaim(isPlainObject$2(element) ? element["params"] : void 0)) return rejection("jsonrpc-shape", "batch-with-modern-element", 400, new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidRequest, "Bad Request: JSON-RPC batches may not contain requests for protocol revision 2026-07-28 or later"), true);
+		if (!(src_Cqbh3MYc_isJSONRPCRequest(element) || src_Cqbh3MYc_isJSONRPCNotification(element) || src_Cqbh3MYc_isJSONRPCResultResponse(element) || src_Cqbh3MYc_isJSONRPCErrorResponse(element))) return rejection("jsonrpc-shape", "batch-with-invalid-element", 400, new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidRequest, "Bad Request: JSON-RPC batch contains an invalid message"), true);
 	}
 	return {
 		kind: "legacy",
@@ -16555,7 +16604,7 @@ function classifyRequestBody(request, body) {
 	const method = body.method;
 	const headerVersion = request.protocolVersionHeader;
 	const headerNamesModern = headerVersion !== void 0 && isModernProtocolVersion(headerVersion);
-	if (method === "initialize" && !src_BHSMhZ_W_carriesValidModernEnvelopeClaim(params)) {
+	if (method === "initialize" && !src_Cqbh3MYc_carriesValidModernEnvelopeClaim(params)) {
 		if (headerNamesModern) return crossCheckMismatch("initialize-with-modern-header", headerVersion, "an initialize request (legacy handshake) was sent with a modern MCP-Protocol-Version header");
 		const requestedVersion = isPlainObject$2(params) && typeof params["protocolVersion"] === "string" ? params["protocolVersion"] : void 0;
 		return {
@@ -16564,11 +16613,11 @@ function classifyRequestBody(request, body) {
 			...requestedVersion !== void 0 && { requestedVersion }
 		};
 	}
-	if (src_BHSMhZ_W_hasEnvelopeClaim(params)) {
-		const meta = src_BHSMhZ_W_requestMetaOf(params);
-		const firstIssue = (meta === void 0 ? [] : src_BHSMhZ_W_validateEnvelopeMeta(meta))[0];
-		if (firstIssue !== void 0) return rejection("envelope", "envelope-invalid", 400, new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Invalid _meta envelope for protocol revision 2026-07-28: ${firstIssue.key}: ${firstIssue.problem}`, { envelope: firstIssue }), true);
-		const claimedVersion = src_BHSMhZ_W_envelopeClaimVersion(params);
+	if (src_Cqbh3MYc_hasEnvelopeClaim(params)) {
+		const meta = src_Cqbh3MYc_requestMetaOf(params);
+		const firstIssue = (meta === void 0 ? [] : src_Cqbh3MYc_validateEnvelopeMeta(meta))[0];
+		if (firstIssue !== void 0) return rejection("envelope", "envelope-invalid", 400, new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Invalid _meta envelope for protocol revision 2026-07-28: ${firstIssue.key}: ${firstIssue.problem}`, { envelope: firstIssue }), true);
+		const claimedVersion = src_Cqbh3MYc_envelopeClaimVersion(params);
 		if (headerVersion !== void 0 && claimedVersion !== void 0 && headerVersion !== claimedVersion) return crossCheckMismatch("header-body-version-mismatch", headerVersion, `the body envelope names protocol version ${claimedVersion} but the MCP-Protocol-Version header names ${headerVersion}`);
 		if (request.mcpMethodHeader !== void 0 && request.mcpMethodHeader !== method) return crossCheckMismatch("method-header-mismatch", request.mcpMethodHeader, `the body names method ${method} but the Mcp-Method header names ${request.mcpMethodHeader}`);
 		return {
@@ -16579,10 +16628,10 @@ function classifyRequestBody(request, body) {
 		};
 	}
 	if (headerNamesModern) {
-		const meta = src_BHSMhZ_W_requestMetaOf(params);
-		const missingFromEnvelope = src_BHSMhZ_W_validateEnvelopeMeta(meta ?? {}).filter((issue) => issue.problem === "missing").map((issue) => issue.key);
+		const meta = src_Cqbh3MYc_requestMetaOf(params);
+		const missingFromEnvelope = src_Cqbh3MYc_validateEnvelopeMeta(meta ?? {}).filter((issue) => issue.problem === "missing").map((issue) => issue.key);
 		const missing = meta === void 0 ? ["_meta"] : missingFromEnvelope.length > 0 ? missingFromEnvelope : [PROTOCOL_VERSION_META_KEY];
-		return rejection("envelope", "modern-header-without-claim", 400, new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Invalid params: the MCP-Protocol-Version header names protocol revision ${headerVersion}, but the request is missing the required per-request envelope key(s): ${missing.join(", ")}`, { envelope: { missing } }), true);
+		return rejection("envelope", "modern-header-without-claim", 400, new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Invalid params: the MCP-Protocol-Version header names protocol revision ${headerVersion}, but the request is missing the required per-request envelope key(s): ${missing.join(", ")}`, { envelope: { missing } }), true);
 	}
 	return {
 		kind: "legacy",
@@ -16595,15 +16644,15 @@ function classifyNotificationBody(request, body) {
 	const method = body.method;
 	const headerVersion = request.protocolVersionHeader;
 	const headerNamesModern = headerVersion !== void 0 && isModernProtocolVersion(headerVersion);
-	if (src_BHSMhZ_W_hasEnvelopeClaim(params)) {
-		const claimedVersion = src_BHSMhZ_W_envelopeClaimVersion(params);
+	if (src_Cqbh3MYc_hasEnvelopeClaim(params)) {
+		const claimedVersion = src_Cqbh3MYc_envelopeClaimVersion(params);
 		if (claimedVersion === void 0) {
-			const meta = src_BHSMhZ_W_requestMetaOf(params);
-			const claimIssue = (meta === void 0 ? [] : src_BHSMhZ_W_validateEnvelopeMeta(meta)).find((issue) => issue.key === PROTOCOL_VERSION_META_KEY) ?? {
+			const meta = src_Cqbh3MYc_requestMetaOf(params);
+			const claimIssue = (meta === void 0 ? [] : src_Cqbh3MYc_validateEnvelopeMeta(meta)).find((issue) => issue.key === PROTOCOL_VERSION_META_KEY) ?? {
 				key: PROTOCOL_VERSION_META_KEY,
 				problem: "expected a protocol version string"
 			};
-			return rejection("envelope", "notification-envelope-invalid", 400, new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Invalid _meta envelope for protocol revision 2026-07-28: ${claimIssue.key}: ${claimIssue.problem}`, { envelope: claimIssue }), true);
+			return rejection("envelope", "notification-envelope-invalid", 400, new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Invalid _meta envelope for protocol revision 2026-07-28: ${claimIssue.key}: ${claimIssue.problem}`, { envelope: claimIssue }), true);
 		}
 		if (headerVersion !== void 0 && headerVersion !== claimedVersion) return crossCheckMismatch("notification-header-body-version-mismatch", headerVersion, `the notification envelope names protocol version ${claimedVersion} but the MCP-Protocol-Version header names ${headerVersion}`);
 		const classification = classificationForClaim(claimedVersion);
@@ -16640,7 +16689,7 @@ function classifyNotificationBody(request, body) {
 * module documentation for the rules. Returns a routing outcome (`legacy` or
 * `modern`) or a ladder rejection; it never throws.
 */
-function src_BHSMhZ_W_classifyInboundRequest(request) {
+function src_Cqbh3MYc_classifyInboundRequest(request) {
 	request = {
 		...request,
 		...request.protocolVersionHeader !== void 0 && { protocolVersionHeader: stripHttpOws(request.protocolVersionHeader) },
@@ -16653,13 +16702,13 @@ function src_BHSMhZ_W_classifyInboundRequest(request) {
 	};
 	const body = request.body;
 	if (Array.isArray(body)) return classifyBatch(body);
-	if (src_BHSMhZ_W_isJSONRPCResultResponse(body) || src_BHSMhZ_W_isJSONRPCErrorResponse(body)) return {
+	if (src_Cqbh3MYc_isJSONRPCResultResponse(body) || src_Cqbh3MYc_isJSONRPCErrorResponse(body)) return {
 		kind: "legacy",
 		reason: "response"
 	};
-	if (isPlainObject$2(body) && src_BHSMhZ_W_isJSONRPCRequest(body)) return classifyRequestBody(request, body);
-	if (isPlainObject$2(body) && src_BHSMhZ_W_isJSONRPCNotification(body)) return classifyNotificationBody(request, body);
-	return rejection("jsonrpc-shape", "invalid-json-rpc-body", 400, new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidRequest, "Bad Request: the request body is not a valid JSON-RPC message"), true);
+	if (isPlainObject$2(body) && src_Cqbh3MYc_isJSONRPCRequest(body)) return classifyRequestBody(request, body);
+	if (isPlainObject$2(body) && src_Cqbh3MYc_isJSONRPCNotification(body)) return classifyNotificationBody(request, body);
+	return rejection("jsonrpc-shape", "invalid-json-rpc-body", 400, new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidRequest, "Bad Request: the request body is not a valid JSON-RPC message"), true);
 }
 /**
 * The rejection a modern-only endpoint (no legacy serving configured)
@@ -16676,16 +16725,16 @@ function src_BHSMhZ_W_classifyInboundRequest(request) {
 * - Legacy-classified notifications return `undefined`: the caller answers
 *   202 with no body and does not dispatch the notification (accept-and-drop).
 */
-function src_BHSMhZ_W_modernOnlyStrictRejection(route, supportedVersions) {
+function src_Cqbh3MYc_modernOnlyStrictRejection(route, supportedVersions) {
 	switch (route.reason) {
 		case "http-method": return rejection("http-method", "modern-only-method-not-allowed", 405, new ProtocolError(-32e3, "Method not allowed."), true);
-		case "batch": return rejection("jsonrpc-shape", "modern-only-batch-not-supported", 400, new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidRequest, "Bad Request: JSON-RPC batches are not supported by this endpoint"), true);
-		case "response": return rejection("jsonrpc-shape", "modern-only-response-post", 400, new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidRequest, "Bad Request: JSON-RPC responses cannot be posted to this endpoint"), true);
+		case "batch": return rejection("jsonrpc-shape", "modern-only-batch-not-supported", 400, new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidRequest, "Bad Request: JSON-RPC batches are not supported by this endpoint"), true);
+		case "response": return rejection("jsonrpc-shape", "modern-only-response-post", 400, new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidRequest, "Bad Request: JSON-RPC responses cannot be posted to this endpoint"), true);
 		case "notification": return;
 		case "initialize":
 		case "no-claim": {
 			const requested = route.requestedVersion;
-			return rejection("era-classification", "modern-only-missing-envelope", 400, requested === void 0 ? new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.UnsupportedProtocolVersion, "Unsupported protocol version: the request did not name a protocol version", { supported: [...supportedVersions] }) : new src_BHSMhZ_W_UnsupportedProtocolVersionError({
+			return rejection("era-classification", "modern-only-missing-envelope", 400, requested === void 0 ? new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.UnsupportedProtocolVersion, "Unsupported protocol version: the request did not name a protocol version", { supported: [...supportedVersions] }) : new src_Cqbh3MYc_UnsupportedProtocolVersionError({
 				supported: [...supportedVersions],
 				requested
 			}), true);
@@ -16869,7 +16918,7 @@ function convertStandardElicitationSchema(schema) {
 		return standardSchemaToJsonSchema(schema, "input");
 	} catch (error) {
 		const detail = error instanceof Error ? error.message : String(error);
-		throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Elicitation requestedSchema must describe an object with flat primitive properties: ${detail}`);
+		throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Elicitation requestedSchema must describe an object with flat primitive properties: ${detail}`);
 	}
 }
 const ANNOTATION_ONLY_JSON_SCHEMA_KEYWORDS = new Set([
@@ -16918,7 +16967,7 @@ function walkRequestedSchema(converted, vendor) {
 	for (const [key, value] of Object.entries(converted)) if (key === "properties" && isJsonObject(value)) pruned[key] = Object.fromEntries(Object.entries(value).map(([name, node]) => [name, walkProperty(node, `properties.${name}`, vendor, unsupported)]));
 	else if (ROOT_KEYS.has(key)) pruned[key] = value;
 	else if (!isAnnotationOnlyJsonSchemaKeyword(key)) unsupported.push(key);
-	if (unsupported.length > 0) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Elicitation requestedSchema contains unsupported JSON Schema constraint(s) after Standard Schema conversion: ${unsupported.join(", ")}`);
+	if (unsupported.length > 0) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Elicitation requestedSchema contains unsupported JSON Schema constraint(s) after Standard Schema conversion: ${unsupported.join(", ")}`);
 	return pruned;
 }
 /** Names the properties that fail value validation, instead of surfacing a raw union dump. */
@@ -16946,11 +16995,11 @@ function normalizeElicitInputParams(input) {
 	const vendor = input.requestedSchema["~standard"].vendor;
 	const pruned = walkRequestedSchema(convertStandardElicitationSchema(input.requestedSchema), vendor);
 	const parsed = parseSchema(ElicitRequestFormParamsSchema.shape.requestedSchema, pruned);
-	if (!parsed.success) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Elicitation requestedSchema only supports flat primitive properties (string, number, integer, boolean, and string enums): ${describeUnsupportedProperties(pruned, parsed.error.message)}`);
+	if (!parsed.success) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Elicitation requestedSchema only supports flat primitive properties (string, number, integer, boolean, and string enums): ${describeUnsupportedProperties(pruned, parsed.error.message)}`);
 	const droppedConstraints = findDroppedConstraintPaths(pruned, parsed.data);
-	if (droppedConstraints.length > 0) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Elicitation requestedSchema contains unsupported JSON Schema constraint(s) after Standard Schema conversion: ${droppedConstraints.join(", ")}`);
+	if (droppedConstraints.length > 0) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Elicitation requestedSchema contains unsupported JSON Schema constraint(s) after Standard Schema conversion: ${droppedConstraints.join(", ")}`);
 	const danglingRequired = (parsed.data.required ?? []).filter((key) => !Object.prototype.hasOwnProperty.call(parsed.data.properties, key));
-	if (danglingRequired.length > 0) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Elicitation requestedSchema lists required properties that are not defined in properties: ${danglingRequired.join(", ")}`);
+	if (danglingRequired.length > 0) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Elicitation requestedSchema lists required properties that are not defined in properties: ${danglingRequired.join(", ")}`);
 	return {
 		...input,
 		mode: "form",
@@ -16998,13 +17047,14 @@ function buildInputRequired(spec) {
 * @example Write-once tool requesting confirmation
 * ```ts
 * server.registerTool('deploy', { inputSchema: z.object({ env: z.string() }) }, async ({ env }, ctx) => {
-*     const confirmed = acceptedContent<{ confirm: boolean }>(ctx.mcpReq.inputResponses, 'confirm');
-*     if (!confirmed) {
+*     const confirmationSchema = z.object({ confirm: z.boolean() });
+*     const confirmed = acceptedContent(ctx.mcpReq.inputResponses, 'confirm', confirmationSchema);
+*     if (confirmed?.confirm !== true) {
 *         return inputRequired({
 *             inputRequests: {
 *                 confirm: inputRequired.elicit({
 *                     message: `Deploy to ${env}?`,
-*                     requestedSchema: { type: 'object', properties: { confirm: { type: 'boolean' } }, required: ['confirm'] }
+*                     requestedSchema: confirmationSchema
 *                 })
 *             }
 *         });
@@ -17131,7 +17181,7 @@ function inputRequiredRoundsExceededMessage(method, maxRounds) {
 function sleep(ms, signal) {
 	return new Promise((resolve, reject) => {
 		if (signal?.aborted) {
-			reject(signal.reason instanceof src_BHSMhZ_W_SdkError ? signal.reason : new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.RequestTimeout, String(signal.reason)));
+			reject(signal.reason instanceof src_Cqbh3MYc_SdkError ? signal.reason : new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.RequestTimeout, String(signal.reason)));
 			return;
 		}
 		const timer = setTimeout(() => {
@@ -17140,7 +17190,7 @@ function sleep(ms, signal) {
 		}, ms);
 		const onAbort = () => {
 			clearTimeout(timer);
-			reject(signal?.reason instanceof src_BHSMhZ_W_SdkError ? signal.reason : new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.RequestTimeout, String(signal?.reason)));
+			reject(signal?.reason instanceof src_Cqbh3MYc_SdkError ? signal.reason : new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.RequestTimeout, String(signal?.reason)));
 		};
 		signal?.addEventListener("abort", onAbort, { once: true });
 	});
@@ -17411,8 +17461,8 @@ const isSpecType = Object.freeze(_isSpecType);
 function bootstrapOutboundCodec(method) {
 	switch (method) {
 		case "initialize":
-		case "notifications/initialized": return src_BHSMhZ_W_codecForVersion(void 0);
-		case "server/discover": return src_BHSMhZ_W_codecForVersion(src_BHSMhZ_W_MODERN_WIRE_REVISION);
+		case "notifications/initialized": return src_Cqbh3MYc_codecForVersion(void 0);
+		case "server/discover": return src_Cqbh3MYc_codecForVersion(src_Cqbh3MYc_MODERN_WIRE_REVISION);
 		default: return;
 	}
 }
@@ -17551,7 +17601,7 @@ let writeNegotiatedProtocolVersion;
 * instance modern at binding time. Exported on the core internal barrel
 * only — never public API.
 */
-function src_BHSMhZ_W_setNegotiatedProtocolVersion(instance, version) {
+function src_Cqbh3MYc_setNegotiatedProtocolVersion(instance, version) {
 	writeNegotiatedProtocolVersion(instance, version);
 }
 /**
@@ -17565,6 +17615,8 @@ var Protocol = class {
 	_transport;
 	_requestMessageId = 0;
 	_requestHandlers = /* @__PURE__ */ new Map();
+	/** Methods registered with an explicit schema; the era gate in `_onrequest` reads it for the Tasks extension names. */
+	_customSchemaRequestMethods = /* @__PURE__ */ new Set();
 	_requestHandlerAbortControllers = /* @__PURE__ */ new Map();
 	_notificationHandlers = /* @__PURE__ */ new Map();
 	_responseHandlers = /* @__PURE__ */ new Map();
@@ -17684,7 +17736,7 @@ var Protocol = class {
 	* outbound legs and leave the base behavior in place.
 	*/
 	_resolveNonCompleteResult(decoded, flow) {
-		return Promise.reject(new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.UnsupportedResultType, `Unsupported result type '${decoded.kind}' for ${flow.request.method}`, {
+		return Promise.reject(new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.UnsupportedResultType, `Unsupported result type '${decoded.kind}' for ${flow.request.method}`, {
 			resultType: decoded.kind,
 			method: flow.request.method
 		}));
@@ -17718,7 +17770,7 @@ var Protocol = class {
 		const totalElapsed = Date.now() - info.startTime;
 		if (info.maxTotalTimeout && totalElapsed >= info.maxTotalTimeout) {
 			this._timeoutInfo.delete(messageId);
-			throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.RequestTimeout, "Maximum total timeout exceeded", {
+			throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.RequestTimeout, "Maximum total timeout exceeded", {
 				maxTotalTimeout: info.maxTotalTimeout,
 				totalElapsed
 			});
@@ -17757,9 +17809,9 @@ var Protocol = class {
 		const _onmessage = this._transport?.onmessage;
 		this._transport.onmessage = (message, extra) => {
 			_onmessage?.(message, extra);
-			if (src_BHSMhZ_W_isJSONRPCResultResponse(message) || src_BHSMhZ_W_isJSONRPCErrorResponse(message)) this._onresponse(message);
-			else if (src_BHSMhZ_W_isJSONRPCRequest(message)) this._onrequest(message, extra);
-			else if (src_BHSMhZ_W_isJSONRPCNotification(message)) this._onnotification(message, extra);
+			if (src_Cqbh3MYc_isJSONRPCResultResponse(message) || src_Cqbh3MYc_isJSONRPCErrorResponse(message)) this._onresponse(message);
+			else if (src_Cqbh3MYc_isJSONRPCRequest(message)) this._onrequest(message, extra);
+			else if (src_Cqbh3MYc_isJSONRPCNotification(message)) this._onnotification(message, extra);
 			else this._onerror(/* @__PURE__ */ new Error(`Unknown message type: ${JSON.stringify(message)}`));
 		};
 		transport.setSupportedProtocolVersions?.(this._supportedProtocolVersions);
@@ -17779,7 +17831,7 @@ var Protocol = class {
 		this._timeoutInfo.clear();
 		const requestHandlerAbortControllers = this._requestHandlerAbortControllers;
 		this._requestHandlerAbortControllers = /* @__PURE__ */ new Map();
-		const error = new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.ConnectionClosed, "Connection closed");
+		const error = new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.ConnectionClosed, "Connection closed");
 		this._transport = void 0;
 		try {
 			this.onclose?.();
@@ -17839,25 +17891,25 @@ var Protocol = class {
 			if (classified !== codec.era) {
 				this._onerror(/* @__PURE__ */ new Error(`Era mismatch on inbound request '${request.method}': classified as ${classified} but this instance serves ${codec.era}`));
 				const requested = extra.classification.revision ?? classified;
-				sendErrorResponse(src_BHSMhZ_W_ProtocolErrorCode.UnsupportedProtocolVersion, `Unsupported protocol version: ${requested}`, {
+				sendErrorResponse(src_Cqbh3MYc_ProtocolErrorCode.UnsupportedProtocolVersion, `Unsupported protocol version: ${requested}`, {
 					supported: this._supportedProtocolVersions,
 					requested
 				});
 				return;
 			}
 		}
-		if (isSpecRequestMethod(request.method) && !codec.hasRequestMethod(request.method)) {
-			sendErrorResponse(src_BHSMhZ_W_ProtocolErrorCode.MethodNotFound, "Method not found");
+		if (isSpecRequestMethod(request.method) && !codec.hasRequestMethod(request.method) && !(isExtensionReusedRequestMethod(request.method) && this._customSchemaRequestMethods.has(request.method))) {
+			sendErrorResponse(src_Cqbh3MYc_ProtocolErrorCode.MethodNotFound, "Method not found");
 			return;
 		}
 		const handler = this._requestHandlers.get(request.method) ?? this.fallbackRequestHandler;
 		if (handler === void 0) {
-			sendErrorResponse(src_BHSMhZ_W_ProtocolErrorCode.MethodNotFound, "Method not found");
+			sendErrorResponse(src_Cqbh3MYc_ProtocolErrorCode.MethodNotFound, "Method not found");
 			return;
 		}
 		const envelopeError = codec.checkInboundEnvelope(lifted);
 		if (envelopeError !== void 0) {
-			sendErrorResponse(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, envelopeError);
+			sendErrorResponse(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, envelopeError);
 			return;
 		}
 		const sendNotification = (notification, options) => this._notificationViaCodec(this._resolveOutboundCodec(notification.method), notification, {
@@ -17902,7 +17954,7 @@ var Protocol = class {
 				encoded = codec.encodeResult(request.method, result, this._outboundServerInfo());
 			} catch (error) {
 				this._onerror(/* @__PURE__ */ new Error(`Failed to encode result for ${request.method}: ${error}`));
-				sendErrorResponse(src_BHSMhZ_W_ProtocolErrorCode.InternalError, "Internal error");
+				sendErrorResponse(src_Cqbh3MYc_ProtocolErrorCode.InternalError, "Internal error");
 				return;
 			}
 			const response = {
@@ -17913,7 +17965,7 @@ var Protocol = class {
 			await capturedTransport?.send(response);
 		}, async (error) => {
 			if (abortController.signal.aborted) return;
-			const thrownCode = Number.isSafeInteger(error["code"]) ? error["code"] : src_BHSMhZ_W_ProtocolErrorCode.InternalError;
+			const thrownCode = Number.isSafeInteger(error["code"]) ? error["code"] : src_Cqbh3MYc_ProtocolErrorCode.InternalError;
 			const errorResponse = {
 				jsonrpc: "2.0",
 				id: request.id,
@@ -17965,7 +18017,7 @@ var Protocol = class {
 		this._responseHandlers.delete(messageId);
 		this._cleanupTimeout(messageId);
 		this._progressHandlers.delete(messageId);
-		if (src_BHSMhZ_W_isJSONRPCResultResponse(response)) handler(response);
+		if (src_Cqbh3MYc_isJSONRPCResultResponse(response)) handler(response);
 		else handler(ProtocolError.fromError(response.error.code, response.error.message, response.error.data));
 	}
 	get transport() {
@@ -17979,8 +18031,11 @@ var Protocol = class {
 	}
 	request(request, schemaOrOptions, maybeOptions) {
 		const codec = this._resolveOutboundCodec(request.method);
+		if (isStandardSchema(schemaOrOptions)) {
+			if (!isExtensionReusedRequestMethod(request.method)) this._assertOutboundRequestInEra(codec, request.method);
+			return this._requestWithSchemaViaCodec(codec, request, schemaOrOptions, maybeOptions);
+		}
 		this._assertOutboundRequestInEra(codec, request.method);
-		if (isStandardSchema(schemaOrOptions)) return this._requestWithSchemaViaCodec(codec, request, schemaOrOptions, maybeOptions);
 		const validate = codecResultValidator(codec, request.method);
 		if (validate === void 0) throw new TypeError(`'${request.method}' is not a spec method; pass a result schema as the second argument to request().`);
 		return this._requestWithSchemaViaCodec(codec, request, validate, schemaOrOptions);
@@ -17991,7 +18046,7 @@ var Protocol = class {
 	* through it. Legacy until a version has been negotiated.
 	*/
 	_negotiatedWireCodec() {
-		return src_BHSMhZ_W_codecForVersion(this._negotiatedProtocolVersion);
+		return src_Cqbh3MYc_codecForVersion(this._negotiatedProtocolVersion);
 	}
 	/**
 	* Protected accessor for the instance's negotiated wire codec, for role
@@ -18026,7 +18081,7 @@ var Protocol = class {
 	* and stay era-blind.
 	*/
 	_assertOutboundRequestInEra(codec, method) {
-		if (isSpecRequestMethod(method) && !codec.hasRequestMethod(method)) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.MethodNotSupportedByProtocolVersion, `Method '${method}' is not supported by the negotiated protocol version (wire era ${codec.era})`, {
+		if (isSpecRequestMethod(method) && !codec.hasRequestMethod(method)) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.MethodNotSupportedByProtocolVersion, `Method '${method}' is not supported by the negotiated protocol version (wire era ${codec.era})`, {
 			method,
 			era: codec.era
 		});
@@ -18073,9 +18128,9 @@ var Protocol = class {
 			}
 			if (options?.signal?.aborted) {
 				const reason = options.signal.reason;
-				throw reason instanceof src_BHSMhZ_W_SdkError ? reason : new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.RequestTimeout, String(reason));
+				throw reason instanceof src_Cqbh3MYc_SdkError ? reason : new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.RequestTimeout, String(reason));
 			}
-			const requestAbort = codec.era === src_BHSMhZ_W_MODERN_WIRE_REVISION && this._transport.hasPerRequestStream === true ? new AbortController() : void 0;
+			const requestAbort = codec.era === src_Cqbh3MYc_MODERN_WIRE_REVISION && this._transport.hasPerRequestStream === true ? new AbortController() : void 0;
 			const messageId = this._requestMessageId++;
 			cleanupMessageId = messageId;
 			const jsonrpcRequest = {
@@ -18112,7 +18167,7 @@ var Protocol = class {
 						onresumptiontoken
 					}).catch((error) => this._onerror(/* @__PURE__ */ new Error(`Failed to send cancellation: ${error}`)));
 				} else requestAbort.abort();
-				reject(reason instanceof src_BHSMhZ_W_SdkError ? reason : new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.RequestTimeout, String(reason)));
+				reject(reason instanceof src_Cqbh3MYc_SdkError ? reason : new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.RequestTimeout, String(reason)));
 			};
 			this._responseHandlers.set(messageId, (response) => {
 				if (options?.signal?.aborted) return;
@@ -18143,13 +18198,13 @@ var Protocol = class {
 				const result = decoded.result;
 				validateStandardSchema(resultSchema, result).then((parseResult) => {
 					if (parseResult.success) resolve(parseResult.data);
-					else reject(new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.InvalidResult, `Invalid result for ${request.method}: ${parseResult.error}`));
+					else reject(new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.InvalidResult, `Invalid result for ${request.method}: ${parseResult.error}`));
 				}, reject);
 			});
 			onAbort = () => cancel(options?.signal?.reason);
 			options?.signal?.addEventListener("abort", onAbort, { once: true });
 			const timeout = options?.timeout ?? DEFAULT_REQUEST_TIMEOUT_MSEC;
-			const timeoutHandler = () => cancel(new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.RequestTimeout, "Request timed out", { timeout }));
+			const timeoutHandler = () => cancel(new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.RequestTimeout, "Request timed out", { timeout }));
 			this._setupTimeout(messageId, timeout, options?.maxTotalTimeout, timeoutHandler, options?.resetTimeoutOnProgress ?? false);
 			this._transport.send(outbound, {
 				relatedRequestId,
@@ -18181,8 +18236,8 @@ var Protocol = class {
 	* resolve through the instance's negotiated era at send time.
 	*/
 	async _notificationViaCodec(codec, notification, options) {
-		if (!this._transport) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.NotConnected, "Not connected");
-		if (isSpecNotificationMethod(notification.method) && !codec.hasNotificationMethod(notification.method)) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.MethodNotSupportedByProtocolVersion, `Notification '${notification.method}' is not supported by the negotiated protocol version (wire era ${codec.era})`, {
+		if (!this._transport) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.NotConnected, "Not connected");
+		if (isSpecNotificationMethod(notification.method) && !codec.hasNotificationMethod(notification.method)) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.MethodNotSupportedByProtocolVersion, `Notification '${notification.method}' is not supported by the negotiated protocol version (wire era ${codec.era})`, {
 			method: notification.method,
 			era: codec.era
 		});
@@ -18213,17 +18268,19 @@ var Protocol = class {
 				let outcome = dispatchCodec.validateRequest(method, request);
 				if (!outcome.ok && outcome.reason === "not-in-era") outcome = dispatchCodec.validateInputRequest(method, request);
 				if (!outcome.ok) {
-					if (outcome.reason === "not-in-era") throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `No wire schema for ${method} in the resolved era`);
+					if (outcome.reason === "not-in-era") throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `No wire schema for ${method} in the resolved era`);
 					throw new Error(outcome.message);
 				}
 				return Promise.resolve(schemasOrHandler(outcome.value, ctx));
 			};
 		} else if (maybeHandler) stored = async (request, ctx) => {
 			const parsed = await validateStandardSchema(schemasOrHandler.params, { ...request.params });
-			if (!parsed.success) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Invalid params for ${method}: ${parsed.error}`);
+			if (!parsed.success) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Invalid params for ${method}: ${parsed.error}`);
 			return maybeHandler(parsed.data, ctx);
 		};
 		else throw new TypeError("setRequestHandler: handler is required");
+		if (typeof schemasOrHandler === "function") this._customSchemaRequestMethods.delete(method);
+		else this._customSchemaRequestMethods.add(method);
 		this._requestHandlers.set(method, this._wrapHandler(method, stored));
 	}
 	/**
@@ -18252,6 +18309,7 @@ var Protocol = class {
 	*/
 	removeRequestHandler(method) {
 		this._requestHandlers.delete(method);
+		this._customSchemaRequestMethods.delete(method);
 	}
 	/**
 	* Asserts that a request handler has not already been set for the given method, in preparation for a new one being automatically installed.
@@ -18265,7 +18323,7 @@ var Protocol = class {
 			this._notificationHandlers.set(method, (notification, codec) => {
 				const outcome = codec.validateNotification(method, notification);
 				if (!outcome.ok) {
-					if (outcome.reason === "not-in-era") throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `No wire schema for ${method} in the resolved era`);
+					if (outcome.reason === "not-in-era") throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `No wire schema for ${method} in the resolved era`);
 					throw new Error(outcome.message);
 				}
 				return Promise.resolve(schemasOrHandler(outcome.value));
@@ -18275,7 +18333,7 @@ var Protocol = class {
 		if (!maybeHandler) throw new TypeError("setNotificationHandler: handler is required");
 		this._notificationHandlers.set(method, async (notification) => {
 			const parsed = await validateStandardSchema(schemasOrHandler.params, { ...notification.params });
-			if (!parsed.success) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Invalid params for notification ${method}: ${parsed.error}`);
+			if (!parsed.success) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Invalid params for notification ${method}: ${parsed.error}`);
 			await maybeHandler(parsed.data, notification);
 		});
 	}
@@ -18306,7 +18364,7 @@ function mergeCapabilities(base, additional) {
 
 //#endregion
 //#region ../core-internal/src/shared/inputRequiredEngine.ts
-function src_BHSMhZ_W_isPlainObject(value) {
+function src_Cqbh3MYc_isPlainObject(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 /**
@@ -18320,12 +18378,12 @@ function src_BHSMhZ_W_isPlainObject(value) {
 function partitionInputResponses(inputResponses) {
 	const accepted = {};
 	const droppedKeys = [];
-	if (!src_BHSMhZ_W_isPlainObject(inputResponses)) return {
+	if (!src_Cqbh3MYc_isPlainObject(inputResponses)) return {
 		accepted,
 		droppedKeys
 	};
 	for (const [key, entry] of Object.entries(inputResponses)) {
-		if (!src_BHSMhZ_W_isPlainObject(entry) || "method" in entry || "result" in entry) {
+		if (!src_Cqbh3MYc_isPlainObject(entry) || "method" in entry || "result" in entry) {
 			droppedKeys.push(key);
 			continue;
 		}
@@ -18474,7 +18532,7 @@ var import_content_type = /* @__PURE__ */ __toESM(require_content_type(), 1);
 * behavior, so a header whose media type is unambiguous is not rejected for
 * a sloppy parameter section.
 */
-function src_BHSMhZ_W_mediaTypeEssence(header) {
+function src_Cqbh3MYc_mediaTypeEssence(header) {
 	if (!header) return;
 	try {
 		return import_content_type.parse(header).type;
@@ -18490,9 +18548,9 @@ function src_BHSMhZ_W_mediaTypeEssence(header) {
 * parameter sections do not reject a header whose media type is unambiguously
 * `application/json` (see `mediaTypeEssence` for the exact grammar).
 */
-function src_BHSMhZ_W_isJsonContentType(header) {
+function src_Cqbh3MYc_isJsonContentType(header) {
 	if (header === "application/json") return true;
-	return src_BHSMhZ_W_mediaTypeEssence(header) === "application/json";
+	return src_Cqbh3MYc_mediaTypeEssence(header) === "application/json";
 }
 
 //#endregion
@@ -18671,7 +18729,7 @@ const MAX_TEMPLATE_LENGTH = 1e6;
 const MAX_VARIABLE_LENGTH = 1e6;
 const MAX_TEMPLATE_EXPRESSIONS = 1e4;
 const MAX_REGEX_LENGTH = 1e6;
-var src_BHSMhZ_W_UriTemplate = class UriTemplate {
+var src_Cqbh3MYc_UriTemplate = class UriTemplate {
 	/**
 	* Returns true if the given string contains any URI template expressions.
 	* A template expression is a sequence of characters enclosed in curly braces,
@@ -18911,7 +18969,7 @@ var InMemoryTransport = class InMemoryTransport {
 	* This is useful for testing authentication scenarios.
 	*/
 	async send(message, options) {
-		if (!this._otherTransport) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.NotConnected, "Not connected");
+		if (!this._otherTransport) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.NotConnected, "Not connected");
 		if (this._otherTransport.onmessage) this._otherTransport.onmessage(message, { authInfo: options?.authInfo });
 		else this._otherTransport._messageQueue.push({
 			message,
@@ -19057,8 +19115,8 @@ function fromJsonSchema(schema, validator) {
 
 //#endregion
 
-//# sourceMappingURL=src-BHSMhZ_W.mjs.map
-;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.2.0/node_modules/@modelcontextprotocol/server/dist/ajvProvider-CEoC__sr.mjs
+//# sourceMappingURL=src-Cqbh3MYc.mjs.map
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.3.1/node_modules/@modelcontextprotocol/server/dist/ajvProvider-CEoC__sr.mjs
 
 
 
@@ -26575,12 +26633,12 @@ const Ajv = import_ajv.Ajv;
 //# sourceMappingURL=ajvProvider-CEoC__sr.mjs.map
 ;// CONCATENATED MODULE: external "node:process"
 const external_node_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:process");
-;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.2.0/node_modules/@modelcontextprotocol/server/dist/shimsNode.mjs
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.3.1/node_modules/@modelcontextprotocol/server/dist/shimsNode.mjs
 
 
 
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.2.0/node_modules/@modelcontextprotocol/server/dist/mcp-DYuW2ZSs.mjs
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.3.1/node_modules/@modelcontextprotocol/server/dist/mcp-DIH4cS6P.mjs
 
 
 
@@ -26642,10 +26700,10 @@ function getCompleter(schema) {
 //#endregion
 //#region src/server/sseKeepAlive.ts
 /** Default interval between SSE keep-alive comment frames. */
-const mcp_DYuW2ZSs_DEFAULT_SSE_KEEP_ALIVE_MS = 15e3;
+const mcp_DIH4cS6P_DEFAULT_SSE_KEEP_ALIVE_MS = 15e3;
 const MAX_TIMER_DELAY_MS = (/* unused pure expression or super */ null && (2 ** 31 - 1));
 /** Arms an unref'd timer, or disables keep-alive for invalid delays. */
-function mcp_DYuW2ZSs_armSseKeepAlive(intervalMs, onTick) {
+function mcp_DIH4cS6P_armSseKeepAlive(intervalMs, onTick) {
 	if (!Number.isFinite(intervalMs) || intervalMs < 1) return;
 	const timer = setInterval(onTick, Math.min(intervalMs, MAX_TIMER_DELAY_MS));
 	timer.unref?.();
@@ -26662,7 +26720,7 @@ function mcp_DYuW2ZSs_armSseKeepAlive(intervalMs, onTick) {
 * listeners never unsubscribe peers). A throwing listener does not stop
 * delivery to the others.
 */
-var mcp_DYuW2ZSs_InMemoryServerEventBus = class {
+var mcp_DIH4cS6P_InMemoryServerEventBus = class {
 	_listeners = /* @__PURE__ */ new Set();
 	/**
 	* @param onerror - Optional callback for errors thrown by listeners
@@ -26693,7 +26751,7 @@ var mcp_DYuW2ZSs_InMemoryServerEventBus = class {
 	}
 };
 /** Build a {@linkcode ServerNotifier} over a bus. */
-function mcp_DYuW2ZSs_createServerNotifier(bus) {
+function mcp_DIH4cS6P_createServerNotifier(bus) {
 	return {
 		toolsChanged: () => bus.publish({ kind: "tools_list_changed" }),
 		promptsChanged: () => bus.publish({ kind: "prompts_list_changed" }),
@@ -26765,7 +26823,7 @@ function serverEventToNotification(event) {
 //#endregion
 //#region src/server/listenRouter.ts
 /** Default capacity guard: refuse a new subscription when this many are already open. */
-const mcp_DYuW2ZSs_DEFAULT_MAX_SUBSCRIPTIONS = 1024;
+const mcp_DIH4cS6P_DEFAULT_MAX_SUBSCRIPTIONS = 1024;
 function jsonRpcError(id, code, message) {
 	return Response.json({
 		jsonrpc: "2.0",
@@ -26799,10 +26857,10 @@ function parseListenFilter(message) {
 	const outcome = codecForVersion(MODERN_WIRE_REVISION).validateRequest("subscriptions/listen", message);
 	return outcome.ok ? outcome.value.params?.notifications : void 0;
 }
-function mcp_DYuW2ZSs_createListenRouter(options) {
+function mcp_DIH4cS6P_createListenRouter(options) {
 	const { bus, onerror } = options;
-	const maxSubscriptions = options.maxSubscriptions ?? mcp_DYuW2ZSs_DEFAULT_MAX_SUBSCRIPTIONS;
-	const keepAliveMs = options.keepAliveMs ?? mcp_DYuW2ZSs_DEFAULT_SSE_KEEP_ALIVE_MS;
+	const maxSubscriptions = options.maxSubscriptions ?? mcp_DIH4cS6P_DEFAULT_MAX_SUBSCRIPTIONS;
+	const keepAliveMs = options.keepAliveMs ?? mcp_DIH4cS6P_DEFAULT_SSE_KEEP_ALIVE_MS;
 	const open = /* @__PURE__ */ new Set();
 	function serve(message, signal, capabilities, serverInfo) {
 		if (open.size >= maxSubscriptions) {
@@ -26877,7 +26935,7 @@ function mcp_DYuW2ZSs_createListenRouter(options) {
 					const note = stampSubscriptionId(serverEventToNotification(event), subscriptionId);
 					writeNotification(note.method, note.params);
 				});
-				keepAliveTimer = mcp_DYuW2ZSs_armSseKeepAlive(keepAliveMs, () => writeFrame(": keepalive\n\n"));
+				keepAliveTimer = mcp_DIH4cS6P_armSseKeepAlive(keepAliveMs, () => writeFrame(": keepalive\n\n"));
 				open.add(teardown);
 			},
 			cancel() {
@@ -26924,7 +26982,7 @@ const CHANGE_NOTIFICATION_METHODS = new Set([
 * pinned instance's existing `send*ListChanged()` calls feed straight into
 * `routeOutbound()`.
 */
-var mcp_DYuW2ZSs_StdioListenRouter = class {
+var mcp_DIH4cS6P_StdioListenRouter = class {
 	/** Active subscriptions, keyed by the listen request's JSON-RPC id verbatim. */
 	_subs = /* @__PURE__ */ new Map();
 	/**
@@ -26936,11 +26994,11 @@ var mcp_DYuW2ZSs_StdioListenRouter = class {
 	_serverCapabilities;
 	/**
 	* The serving instance's identity, stamped onto the graceful-close
-	* results' `_meta` (the spec's `SubscriptionsListenResultMeta` extends
+	* results' `_meta` (the spec's `SubscriptionsListenResultMetaObject` extends
 	* `ResultMetaObject`). Handed over together with the capabilities.
 	*/
 	_serverInfo;
-	constructor(_maxSubscriptions = mcp_DYuW2ZSs_DEFAULT_MAX_SUBSCRIPTIONS, serverCapabilities, serverInfo) {
+	constructor(_maxSubscriptions = mcp_DIH4cS6P_DEFAULT_MAX_SUBSCRIPTIONS, serverCapabilities, serverInfo) {
 		this._maxSubscriptions = _maxSubscriptions;
 		this._serverCapabilities = serverCapabilities;
 		this._serverInfo = serverInfo;
@@ -27063,6 +27121,15 @@ function notificationToServerEvent(method, uri) {
 
 //#endregion
 //#region src/server/middleware/bearerAuth.ts
+function comparableResource(value) {
+	const text = String(value);
+	const hash = text.indexOf("#");
+	return (hash === -1 ? text : text.slice(0, hash)).replace(/\/$/, "");
+}
+function sameResource(reported, expected) {
+	if (!reported) return false;
+	return comparableResource(reported) === comparableResource(expected);
+}
 function headerQuotedValue(value) {
 	return value.replaceAll(/[\\"]/g, String.raw`\$&`).replaceAll(/[^\u0020-\u007E]/g, " ");
 }
@@ -27086,7 +27153,8 @@ function buildWwwAuthenticateHeader(errorCode, description, requiredScopes, reso
 * the verified {@link AuthInfo}.
 *
 * The runtime-neutral core of Bearer authentication: it parses the header,
-* runs the verifier, enforces `requiredScopes`, and rejects tokens without an
+* runs the verifier, compares the token's resource with `expectedResource`,
+* enforces `requiredScopes`, and rejects tokens without an
 * expiration or past it. On any failure it throws an {@link OAuthError} —
 * pass that to {@link bearerAuthChallengeResponse} for the matching HTTP
 * answer, or use {@link requireBearerAuth} to get both steps as one call.
@@ -27095,11 +27163,12 @@ function buildWwwAuthenticateHeader(errorCode, description, requiredScopes, reso
 * `@modelcontextprotocol/express` feeds it `req.headers.authorization`.
 */
 async function verifyBearerToken(authorizationHeader, options) {
-	const { verifier, requiredScopes = [] } = options;
+	const { verifier, requiredScopes = [], expectedResource } = options;
 	if (!authorizationHeader) throw new OAuthError(OAuthErrorCode.InvalidToken, "Missing Authorization header");
 	const [type, token] = authorizationHeader.split(" ");
 	if (type?.toLowerCase() !== "bearer" || !token) throw new OAuthError(OAuthErrorCode.InvalidToken, "Invalid Authorization header format, expected 'Bearer TOKEN'");
 	const authInfo = await verifier.verifyAccessToken(token);
+	if (expectedResource !== void 0 && !sameResource(authInfo.resource, expectedResource)) throw new OAuthError(OAuthErrorCode.InvalidToken, "Token was not issued for this resource");
 	if (requiredScopes.length > 0) {
 		if (!requiredScopes.every((scope) => authInfo.scopes.includes(scope))) throw new OAuthError(OAuthErrorCode.InsufficientScope, "Insufficient scope");
 	}
@@ -27167,11 +27236,12 @@ function bearerAuthChallengeResponse(error, options) {
 * ```
 */
 function requireBearerAuth(options) {
-	const { verifier, requiredScopes = [], resourceMetadataUrl } = options;
+	const { verifier, requiredScopes = [], resourceMetadataUrl, expectedResource } = options;
 	const resolved = {
 		verifier,
 		requiredScopes,
-		resourceMetadataUrl
+		resourceMetadataUrl,
+		expectedResource
 	};
 	return async (request) => {
 		const [authorizationHeader] = (request.headers.get("authorization") ?? "").split(",");
@@ -27333,7 +27403,7 @@ function requireScopes(...scopes) {
 	};
 }
 /** @internal */
-async function mcp_DYuW2ZSs_findScopeChallenge(requests, authInfo, resolve) {
+async function mcp_DIH4cS6P_findScopeChallenge(requests, authInfo, resolve) {
 	for (const request of requests) {
 		const challenge = await resolve({
 			request,
@@ -27353,12 +27423,12 @@ async function mcp_DYuW2ZSs_findScopeChallenge(requests, authInfo, resolve) {
 *
 * @internal
 */
-function mcp_DYuW2ZSs_scopeChallengeResourceMetadataUrl(authInfo) {
+function mcp_DIH4cS6P_scopeChallengeResourceMetadataUrl(authInfo) {
 	if (authInfo?.resourceMetadataUrl !== void 0) return authInfo.resourceMetadataUrl;
 	if (authInfo?.resource?.protocol === "https:" || authInfo?.resource?.protocol === "http:") return getOAuthProtectedResourceMetadataUrl(authInfo.resource);
 }
 /** @internal */
-function mcp_DYuW2ZSs_createScopeChallengeResponse(challenge, resourceMetadataUrl) {
+function mcp_DIH4cS6P_createScopeChallengeResponse(challenge, resourceMetadataUrl) {
 	return bearerAuthChallengeResponse(new OAuthError(OAuthErrorCode.InsufficientScope, challenge.errorDescription ?? "Insufficient scope"), {
 		requiredScopes: [...challenge.scopes],
 		resourceMetadataUrl
@@ -27390,10 +27460,10 @@ function resolveLegacyShimOptions(options) {
 * check and the shim's gate.
 */
 function coerceEmbeddedInputRequest(method, key, entry) {
-	if (entry === null || typeof entry !== "object" || typeof entry.method !== "string") throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `Handler for ${method} returned an invalid input request '${key}': each inputRequests entry must be an embedded elicitation/create, sampling/createMessage, or roots/list request`);
+	if (entry === null || typeof entry !== "object" || typeof entry.method !== "string") throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `Handler for ${method} returned an invalid input request '${key}': each inputRequests entry must be an embedded elicitation/create, sampling/createMessage, or roots/list request`);
 	const embedded = entry;
 	const required = requiredClientCapabilitiesForInputRequest(embedded);
-	if (required === void 0) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input request '${key}' of kind '${embedded.method}', which is not an embedded request the 2026-07-28 revision defines`);
+	if (required === void 0) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input request '${key}' of kind '${embedded.method}', which is not an embedded request the 2026-07-28 revision defines`);
 	return {
 		embedded,
 		required
@@ -27423,7 +27493,7 @@ function legacyShimFailure(method, message) {
 		}],
 		isError: true
 	};
-	throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, message);
+	throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, message);
 }
 /** The fulfilment loop — see the module doc for the contract. */
 var LegacyInputRequiredShim = class {
@@ -27441,15 +27511,15 @@ var LegacyInputRequiredShim = class {
 			const inputRequests = current.inputRequests;
 			const hasInputRequests = inputRequests != null && Object.keys(inputRequests).length > 0;
 			const requestState = typeof current.requestState === "string" ? current.requestState : void 0;
-			if (!hasInputRequests && requestState === void 0) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input-required result with neither inputRequests nor requestState (every InputRequiredResult must include at least one of the two)`);
+			if (!hasInputRequests && requestState === void 0) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input-required result with neither inputRequests nor requestState (every InputRequiredResult must include at least one of the two)`);
 			let responses;
 			if (hasInputRequests) {
 				const declared = this._host.resolvedClientCapabilities(ctx);
 				const coerced = [];
 				for (const [key, entry] of Object.entries(inputRequests)) {
 					const { embedded, required } = coerceEmbeddedInputRequest(method, key, entry);
-					if (embedded.method !== "roots/list" && embedded.params === void 0) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input request '${key}' of kind '${embedded.method}' without params`);
-					if (src_BHSMhZ_W_missingClientCapabilities(required, declared) !== void 0) return legacyShimFailure(method, `Cannot request input '${key}' (${embedded.method}): the client on this 2025-era connection did not declare the required capability${declared === void 0 ? " (no client capabilities are available on this connection — per-request legacy serving cannot receive server-to-client requests)" : ""}`);
+					if (embedded.method !== "roots/list" && embedded.params === void 0) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input request '${key}' of kind '${embedded.method}' without params`);
+					if (src_Cqbh3MYc_missingClientCapabilities(required, declared) !== void 0) return legacyShimFailure(method, `Cannot request input '${key}' (${embedded.method}): the client on this 2025-era connection did not declare the required capability${declared === void 0 ? " (no client capabilities are available on this connection — per-request legacy serving cannot receive server-to-client requests)" : ""}`);
 					coerced.push([key, embedded]);
 				}
 				const roundAbort = linkedRoundAbort(outerSignal);
@@ -27534,7 +27604,7 @@ let readServerIdentity;
 * accessors keep answering on instances that never see an `initialize` handshake.
 * Not public API.
 */
-function mcp_DYuW2ZSs_seedClientIdentityFromEnvelope(server, identity) {
+function mcp_DIH4cS6P_seedClientIdentityFromEnvelope(server, identity) {
 	writeClientIdentity(server, identity);
 }
 /**
@@ -27546,17 +27616,17 @@ function mcp_DYuW2ZSs_seedClientIdentityFromEnvelope(server, identity) {
 * answering `-32601` unless their own supported-versions list opts into a modern
 * revision. Not public API.
 */
-function mcp_DYuW2ZSs_installModernOnlyHandlers(server, servedModernVersions) {
+function mcp_DIH4cS6P_installModernOnlyHandlers(server, servedModernVersions) {
 	installDiscoverHandler(server, servedModernVersions);
 }
 /**
 * Package-internal: the instance's implementation identity, for the serving
 * entries to stamp onto entry-built results (the `subscriptions/listen`
 * graceful-close result — built outside the encode seam, but the spec's
-* `SubscriptionsListenResultMeta` extends `ResultMetaObject`, so it carries
+* `SubscriptionsListenResultMetaObject` extends `ResultMetaObject`, so it carries
 * the serverInfo SHOULD like every other result). Not public API.
 */
-function mcp_DYuW2ZSs_serverIdentityOf(server) {
+function mcp_DIH4cS6P_serverIdentityOf(server) {
 	return readServerIdentity(server);
 }
 /**
@@ -27624,6 +27694,11 @@ var Server = class extends Protocol {
 		if (modernProtocolVersions(this._supportedProtocolVersions).length > 0) this.setRequestHandler("server/discover", () => this._ondiscover());
 		if (this._capabilities.logging) this._registerLoggingHandler();
 	}
+	/** Attaches to the given transport; rejects while this instance is connected to another one. */
+	async connect(transport) {
+		if (this.transport !== void 0) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.AlreadyConnected, "Use a separate Server instance per connection: this instance is already connected to a transport. To connect it to a new transport, call close() first.");
+		await super.connect(transport);
+	}
 	/**
 	* Registers the built-in `logging/setLevel` request handler.
 	*
@@ -27686,7 +27761,7 @@ var Server = class extends Protocol {
 	* The new capabilities will be merged with any existing capabilities previously given (e.g., at initialization).
 	*/
 	registerCapabilities(capabilities) {
-		if (this.transport) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.AlreadyConnected, "Cannot register capabilities after connecting to transport");
+		if (this.transport) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.AlreadyConnected, "Cannot register capabilities after connecting to transport");
 		const hadLogging = !!this._capabilities.logging;
 		this._capabilities = mergeCapabilities(this._capabilities, capabilities);
 		if (!hadLogging && this._capabilities.logging) this._registerLoggingHandler();
@@ -27710,27 +27785,27 @@ var Server = class extends Protocol {
 			const isInputRequiredCapable = INPUT_REQUIRED_CAPABLE_METHODS.has(method);
 			if (cacheHint === void 0 && !isInputRequiredCapable) return async (request, ctx) => {
 				const result = await handler(request, ctx);
-				if (isInputRequiredResult(result)) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input-required result, but only tools/call, prompts/get and resources/read support input_required (protocol revision 2026-07-28)`);
+				if (isInputRequiredResult(result)) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input-required result, but only tools/call, prompts/get and resources/read support input_required (protocol revision 2026-07-28)`);
 				return result;
 			};
 			return async (request, ctx) => {
 				const result = isInputRequiredCapable ? await this._invokeInputRequiredCapableHandler(method, handler, request, ctx) : await handler(request, ctx);
 				if (isInputRequiredResult(result)) {
-					if (!isInputRequiredCapable) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input-required result, but only tools/call, prompts/get and resources/read support input_required (protocol revision 2026-07-28)`);
+					if (!isInputRequiredCapable) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input-required result, but only tools/call, prompts/get and resources/read support input_required (protocol revision 2026-07-28)`);
 					return result;
 				}
 				return cacheHint === void 0 ? result : attachCacheHintFallback(result, cacheHint);
 			};
 		}
 		return async (request, ctx) => {
-			const codec = src_BHSMhZ_W_codecForVersion(this._negotiatedProtocolVersion);
+			const codec = src_Cqbh3MYc_codecForVersion(this._negotiatedProtocolVersion);
 			const validatedRequest = codec.validateRequest("tools/call", request);
-			if (!validatedRequest.ok) throw new ProtocolError(validatedRequest.reason === "not-in-era" ? src_BHSMhZ_W_ProtocolErrorCode.InternalError : src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, validatedRequest.reason === "not-in-era" ? "No wire schema for tools/call in the resolved era" : `Invalid tools/call request: ${validatedRequest.message}`);
+			if (!validatedRequest.ok) throw new ProtocolError(validatedRequest.reason === "not-in-era" ? src_Cqbh3MYc_ProtocolErrorCode.InternalError : src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, validatedRequest.reason === "not-in-era" ? "No wire schema for tools/call in the resolved era" : `Invalid tools/call request: ${validatedRequest.message}`);
 			const result = await this._invokeInputRequiredCapableHandler("tools/call", handler, request, ctx);
 			if (isInputRequiredResult(result)) return result;
 			const normalizedResult = normalizeContentlessToolResult(result);
 			const validationResult = codec.validateResult("tools/call", normalizedResult);
-			if (!validationResult.ok) throw new ProtocolError(validationResult.reason === "not-in-era" ? src_BHSMhZ_W_ProtocolErrorCode.InternalError : src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, validationResult.reason === "not-in-era" ? "No wire schema for tools/call in the resolved era" : `Invalid tools/call result: ${validationResult.message}`);
+			if (!validationResult.ok) throw new ProtocolError(validationResult.reason === "not-in-era" ? src_Cqbh3MYc_ProtocolErrorCode.InternalError : src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, validationResult.reason === "not-in-era" ? "No wire schema for tools/call in the resolved era" : `Invalid tools/call result: ${validationResult.message}`);
 			return validationResult.value;
 		};
 	}
@@ -27767,7 +27842,7 @@ var Server = class extends Protocol {
 	async _invokeInputRequiredCapableHandler(method, handler, request, ctx) {
 		const servedModern = this._servedModernEra();
 		const rawRequestState = ctx.mcpReq.requestState();
-		if (rawRequestState !== void 0 && typeof rawRequestState !== "string") throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, "Invalid or expired requestState", { reason: "invalid_request_state" });
+		if (rawRequestState !== void 0 && typeof rawRequestState !== "string") throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, "Invalid or expired requestState", { reason: "invalid_request_state" });
 		let ctxForHandler = ctx;
 		if (typeof rawRequestState === "string") {
 			const decoded = await this._verifyRequestState(rawRequestState, ctx, method);
@@ -27777,27 +27852,27 @@ var Server = class extends Protocol {
 		try {
 			result = await handler(request, ctxForHandler);
 		} catch (error) {
-			if (error instanceof ProtocolError && error.code === src_BHSMhZ_W_ProtocolErrorCode.UrlElicitationRequired) {
+			if (error instanceof ProtocolError && error.code === src_Cqbh3MYc_ProtocolErrorCode.UrlElicitationRequired) {
 				if (!servedModern) throw error;
-				throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `URL elicitation cannot be signalled by throwing UrlElicitationRequiredError on protocol revision ${this._negotiatedProtocolVersion}: return inputRequired({ inputRequests: { …: inputRequired.elicitUrl(...) } }) from the handler instead. The urlElicitationRequired error (-32042) of earlier revisions is not available on this revision.`);
+				throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `URL elicitation cannot be signalled by throwing UrlElicitationRequiredError on protocol revision ${this._negotiatedProtocolVersion}: return inputRequired({ inputRequests: { …: inputRequired.elicitUrl(...) } }) from the handler instead. The urlElicitationRequired error (-32042) of earlier revisions is not available on this revision.`);
 			}
 			throw error;
 		}
 		if (!isInputRequiredResult(result)) return result;
 		if (!servedModern) {
-			if (!this._inputRequiredServing.legacyShim) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input-required result, but this request is served on protocol revision ${this._negotiatedProtocolVersion ?? LATEST_PROTOCOL_VERSION}, which has no input_required vocabulary`);
+			if (!this._inputRequiredServing.legacyShim) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input-required result, but this request is served on protocol revision ${this._negotiatedProtocolVersion ?? LATEST_PROTOCOL_VERSION}, which has no input_required vocabulary`);
 			return await this._legacyInputRequiredShim().fulfill(method, handler, request, ctxForHandler, result);
 		}
 		const inputRequests = result.inputRequests;
 		const hasInputRequests = inputRequests != null && Object.keys(inputRequests).length > 0;
 		const hasRequestState = typeof result.requestState === "string";
-		if (!hasInputRequests && !hasRequestState) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input-required result with neither inputRequests nor requestState (every InputRequiredResult must include at least one of the two)`);
+		if (!hasInputRequests && !hasRequestState) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `Handler for ${method} returned an input-required result with neither inputRequests nor requestState (every InputRequiredResult must include at least one of the two)`);
 		if (hasInputRequests) {
 			const declared = this._inputRequestCapabilityView(ctx);
 			for (const [key, entry] of Object.entries(inputRequests)) {
 				const { embedded, required } = coerceEmbeddedInputRequest(method, key, entry);
-				const missing = src_BHSMhZ_W_missingClientCapabilities(required, declared);
-				if (missing !== void 0) throw new src_BHSMhZ_W_MissingRequiredClientCapabilityError({ requiredCapabilities: missing }, `Cannot request input '${key}' (${embedded.method}): the request's client capabilities do not declare the required capability`);
+				const missing = src_Cqbh3MYc_missingClientCapabilities(required, declared);
+				if (missing !== void 0) throw new src_Cqbh3MYc_MissingRequiredClientCapabilityError({ requiredCapabilities: missing }, `Cannot request input '${key}' (${embedded.method}): the request's client capabilities do not declare the required capability`);
 			}
 		}
 		return result;
@@ -27814,7 +27889,7 @@ var Server = class extends Protocol {
 			return await this._requestStateVerify(state, ctx);
 		} catch (error) {
 			this.onerror?.(/* @__PURE__ */ new Error(`requestState verification rejected ${method}: ${error instanceof Error ? error.message : String(error)}`));
-			throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, "Invalid or expired requestState", { reason: "invalid_request_state" });
+			throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, "Invalid or expired requestState", { reason: "invalid_request_state" });
 		}
 	}
 	/**
@@ -27835,7 +27910,7 @@ var Server = class extends Protocol {
 	* also reject it; this guard runs first to carry the steer.
 	*/
 	_assertPushApiInServedEra(method) {
-		if (this._servedModernEra()) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.MethodNotSupportedByProtocolVersion, `Server-to-client requests are not available on protocol revision ${this._negotiatedProtocolVersion}: '${method}' cannot be sent while serving a request on that revision. Return inputRequired({ ... }) from the handler instead — the client fulfils the embedded requests and retries the original request (multi round-trip requests).`, {
+		if (this._servedModernEra()) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.MethodNotSupportedByProtocolVersion, `Server-to-client requests are not available on protocol revision ${this._negotiatedProtocolVersion}: '${method}' cannot be sent while serving a request on that revision. Return inputRequired({ ... }) from the handler instead — the client fulfils the embedded requests and retries the original request (multi round-trip requests).`, {
 			method,
 			era: "2026-07-28"
 		});
@@ -27843,13 +27918,13 @@ var Server = class extends Protocol {
 	assertCapabilityForMethod(method) {
 		switch (method) {
 			case "sampling/createMessage":
-				if (!this._clientCapabilities?.sampling) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Client does not support sampling (required for ${method})`);
+				if (!this._clientCapabilities?.sampling) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Client does not support sampling (required for ${method})`);
 				break;
 			case "elicitation/create":
-				if (!this._clientCapabilities?.elicitation) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Client does not support elicitation (required for ${method})`);
+				if (!this._clientCapabilities?.elicitation) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Client does not support elicitation (required for ${method})`);
 				break;
 			case "roots/list":
-				if (!this._clientCapabilities?.roots) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Client does not support listing roots (required for ${method})`);
+				if (!this._clientCapabilities?.roots) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Client does not support listing roots (required for ${method})`);
 				break;
 			case "ping": break;
 		}
@@ -27857,20 +27932,20 @@ var Server = class extends Protocol {
 	assertNotificationCapability(method) {
 		switch (method) {
 			case "notifications/message":
-				if (!this._capabilities.logging) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Server does not support logging (required for ${method})`);
+				if (!this._capabilities.logging) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Server does not support logging (required for ${method})`);
 				break;
 			case "notifications/resources/updated":
 			case "notifications/resources/list_changed":
-				if (!this._capabilities.resources) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Server does not support notifying about resources (required for ${method})`);
+				if (!this._capabilities.resources) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Server does not support notifying about resources (required for ${method})`);
 				break;
 			case "notifications/tools/list_changed":
-				if (!this._capabilities.tools) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Server does not support notifying of tool list changes (required for ${method})`);
+				if (!this._capabilities.tools) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Server does not support notifying of tool list changes (required for ${method})`);
 				break;
 			case "notifications/prompts/list_changed":
-				if (!this._capabilities.prompts) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Server does not support notifying of prompt list changes (required for ${method})`);
+				if (!this._capabilities.prompts) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Server does not support notifying of prompt list changes (required for ${method})`);
 				break;
 			case "notifications/elicitation/complete":
-				if (!this._clientCapabilities?.elicitation?.url) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Client does not support URL elicitation (required for ${method})`);
+				if (!this._clientCapabilities?.elicitation?.url) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Client does not support URL elicitation (required for ${method})`);
 				break;
 			case "notifications/cancelled": break;
 			case "notifications/progress": break;
@@ -27879,23 +27954,23 @@ var Server = class extends Protocol {
 	assertRequestHandlerCapability(method) {
 		switch (method) {
 			case "completion/complete":
-				if (!this._capabilities.completions) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Server does not support completions (required for ${method})`);
+				if (!this._capabilities.completions) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Server does not support completions (required for ${method})`);
 				break;
 			case "logging/setLevel":
-				if (!this._capabilities.logging) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Server does not support logging (required for ${method})`);
+				if (!this._capabilities.logging) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Server does not support logging (required for ${method})`);
 				break;
 			case "prompts/get":
 			case "prompts/list":
-				if (!this._capabilities.prompts) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Server does not support prompts (required for ${method})`);
+				if (!this._capabilities.prompts) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Server does not support prompts (required for ${method})`);
 				break;
 			case "resources/list":
 			case "resources/templates/list":
 			case "resources/read":
-				if (!this._capabilities.resources) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Server does not support resources (required for ${method})`);
+				if (!this._capabilities.resources) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Server does not support resources (required for ${method})`);
 				break;
 			case "tools/call":
 			case "tools/list":
-				if (!this._capabilities.tools) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, `Server does not support tools (required for ${method})`);
+				if (!this._capabilities.tools) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, `Server does not support tools (required for ${method})`);
 				break;
 			case "ping":
 			case "initialize": break;
@@ -28011,7 +28086,7 @@ var Server = class extends Protocol {
 	}
 	async createMessage(params, options) {
 		this._assertPushApiInServedEra("sampling/createMessage");
-		if ((params.tools || params.toolChoice) && !this._clientCapabilities?.sampling?.tools) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, "Client does not support sampling tools capability.");
+		if ((params.tools || params.toolChoice) && !this._clientCapabilities?.sampling?.tools) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, "Client does not support sampling tools capability.");
 		if (params.messages.length > 0) {
 			const lastMessage = params.messages.at(-1);
 			const lastContent = Array.isArray(lastMessage.content) ? lastMessage.content : [lastMessage.content];
@@ -28020,13 +28095,13 @@ var Server = class extends Protocol {
 			const previousContent = previousMessage ? Array.isArray(previousMessage.content) ? previousMessage.content : [previousMessage.content] : [];
 			const hasPreviousToolUse = previousContent.some((c) => c.type === "tool_use");
 			if (hasToolResults) {
-				if (lastContent.some((c) => c.type !== "tool_result")) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, "The last message must contain only tool_result content if any is present");
-				if (!hasPreviousToolUse) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, "tool_result blocks are not matching any tool_use from the previous message");
+				if (lastContent.some((c) => c.type !== "tool_result")) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, "The last message must contain only tool_result content if any is present");
+				if (!hasPreviousToolUse) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, "tool_result blocks are not matching any tool_use from the previous message");
 			}
 			if (hasPreviousToolUse) {
 				const toolUseIds = new Set(previousContent.filter((c) => c.type === "tool_use").map((c) => c.id));
 				const toolResultIds = new Set(lastContent.filter((c) => c.type === "tool_result").map((c) => c.toolUseId));
-				if (toolUseIds.size !== toolResultIds.size || ![...toolUseIds].every((id) => toolResultIds.has(id))) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, "ids of tool_result blocks and tool_use blocks from previous message do not match");
+				if (toolUseIds.size !== toolResultIds.size || ![...toolUseIds].every((id) => toolResultIds.has(id))) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, "ids of tool_result blocks and tool_use blocks from previous message do not match");
 			}
 		}
 		const hasTools = Boolean(params.tools || params.toolChoice);
@@ -28035,7 +28110,7 @@ var Server = class extends Protocol {
 			params
 		}, options);
 		const outcome = this._wireCodec().samplingResultVariant(hasTools, wide);
-		if (!outcome.ok) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.InvalidResult, `Invalid sampling/createMessage result: ${outcome.reason === "invalid" ? outcome.message : outcome.reason}`);
+		if (!outcome.ok) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.InvalidResult, `Invalid sampling/createMessage result: ${outcome.reason === "invalid" ? outcome.message : outcome.reason}`);
 		return outcome.value;
 	}
 	/**
@@ -28054,10 +28129,10 @@ var Server = class extends Protocol {
 		this._assertPushApiInServedEra("elicitation/create");
 		switch (params.mode ?? "form") {
 			case "url":
-				if (!this._clientCapabilities?.elicitation?.url) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, "Client does not support url elicitation.");
+				if (!this._clientCapabilities?.elicitation?.url) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, "Client does not support url elicitation.");
 				break;
 			case "form":
-				if (!this._clientCapabilities?.elicitation?.form) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, "Client does not support form elicitation.");
+				if (!this._clientCapabilities?.elicitation?.form) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, "Client does not support form elicitation.");
 				break;
 		}
 		return this._sendElicitationLeg(params, options);
@@ -28092,10 +28167,10 @@ var Server = class extends Protocol {
 				}, options);
 				if (validateAcceptedContent && result.action === "accept" && result.content && formParams.requestedSchema) try {
 					const validationResult = this._jsonSchemaValidator.getValidator(formParams.requestedSchema)(result.content);
-					if (!validationResult.valid) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Elicitation response content does not match requested schema: ${validationResult.errorMessage}`);
+					if (!validationResult.valid) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Elicitation response content does not match requested schema: ${validationResult.errorMessage}`);
 				} catch (error) {
 					if (error instanceof ProtocolError) throw error;
-					throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InternalError, `Error validating elicitation response: ${error instanceof Error ? error.message : String(error)}`);
+					throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InternalError, `Error validating elicitation response: ${error instanceof Error ? error.message : String(error)}`);
 				}
 				return result;
 			}
@@ -28115,7 +28190,7 @@ var Server = class extends Protocol {
 	* @returns A function that emits the completion notification when awaited.
 	*/
 	createElicitationCompletionNotifier(elicitationId, options) {
-		if (!this._clientCapabilities?.elicitation?.url) throw new src_BHSMhZ_W_SdkError(src_BHSMhZ_W_SdkErrorCode.CapabilityNotSupported, "Client does not support URL elicitation (required for notifications/elicitation/complete)");
+		if (!this._clientCapabilities?.elicitation?.url) throw new src_Cqbh3MYc_SdkError(src_Cqbh3MYc_SdkErrorCode.CapabilityNotSupported, "Client does not support URL elicitation (required for notifications/elicitation/complete)");
 		return () => this.notification({
 			method: "notifications/elicitation/complete",
 			params: { elicitationId }
@@ -28185,6 +28260,30 @@ function discoverAdvertisedCapabilities(capabilities) {
 
 //#endregion
 //#region src/server/mcp.ts
+function toolInputElementCount(value, max) {
+	let count = 0;
+	const stack = [value];
+	while (stack.length > 0) {
+		const node = stack.pop();
+		if (node === null || typeof node !== "object") continue;
+		if (Array.isArray(node)) for (const child of node) {
+			if (++count > max) return count;
+			if (child !== null && typeof child === "object") stack.push(child);
+		}
+		else for (const key in node) {
+			if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
+			if (++count > max) return count;
+			const child = node[key];
+			if (child !== null && typeof child === "object") stack.push(child);
+		}
+	}
+	return count;
+}
+function resolveMaxToolInputElements(value) {
+	if (value === void 0 || value === Infinity) return void 0;
+	if (typeof value !== "number" || Number.isNaN(value) || value < 1) throw new RangeError(`maxToolInputElements must be a number of at least 1, or Infinity, got ${String(value)}`);
+	return value;
+}
 /**
 * High-level MCP server that provides a simpler API for working with resources, tools, and prompts.
 * For advanced usage (like sending notifications or setting custom request handlers), use the underlying
@@ -28198,21 +28297,17 @@ function discoverAdvertisedCapabilities(capabilities) {
 * });
 * ```
 */
-var mcp_DYuW2ZSs_McpServer = class {
+var mcp_DIH4cS6P_McpServer = class {
 	/**
 	* The underlying {@linkcode Server} instance, useful for advanced operations like sending notifications.
 	*/
 	server;
+	_maxToolInputElements;
 	_registeredResources = {};
 	_registeredResourceTemplates = {};
 	_registeredTools = {};
 	_registeredPrompts = {};
-	/**
-	* Per-tool JSON-converted `inputSchema`, memoized so the SEP-2243
-	* registration-time scan and the pre-dispatch validation step share one
-	* conversion instead of paying it twice per request under the
-	* per-request-factory `createMcpHandler` model.
-	*/
+	/** Per-tool JSON-converted `inputSchema`, filled on first use by `toolInputSchemaJson()`. */
 	_toolInputSchemaJson = {};
 	/**
 	* The JSON-serialized `inputSchema` of a registered tool, or `undefined`
@@ -28237,6 +28332,7 @@ var mcp_DYuW2ZSs_McpServer = class {
 	}
 	constructor(serverInfo, options) {
 		this.server = new Server(serverInfo, options);
+		this._maxToolInputElements = resolveMaxToolInputElements(options?.maxToolInputElements);
 		if (options?.capabilities?.tools) this.setToolRequestHandlers();
 		if (options?.capabilities?.resources) this.setResourceRequestHandlers();
 		if (options?.capabilities?.prompts) this.setPromptRequestHandlers();
@@ -28308,7 +28404,7 @@ var mcp_DYuW2ZSs_McpServer = class {
 				name,
 				title: tool.title,
 				description: tool.description,
-				inputSchema: tool.inputSchema ? standardSchemaToJsonSchema(tool.inputSchema, "input") : EMPTY_OBJECT_JSON_SCHEMA,
+				inputSchema: tool.inputSchema ? convertListedInputSchema(name, tool.inputSchema) : EMPTY_OBJECT_JSON_SCHEMA,
 				annotations: tool.annotations,
 				icons: tool.icons,
 				execution: tool.execution,
@@ -28319,8 +28415,8 @@ var mcp_DYuW2ZSs_McpServer = class {
 		}) }));
 		this.server.setRequestHandler("tools/call", async (request, ctx) => {
 			const tool = this._registeredTools[request.params.name];
-			if (!tool) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Tool ${request.params.name} not found`);
-			if (!tool.enabled) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Tool ${request.params.name} disabled`);
+			if (!tool) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Tool ${request.params.name} not found`);
+			if (!tool.enabled) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Tool ${request.params.name} disabled`);
 			try {
 				const args = await this.validateToolInput(tool, request.params.arguments, request.params.name);
 				const result = await this.executeToolHandler(tool, args, ctx);
@@ -28328,7 +28424,7 @@ var mcp_DYuW2ZSs_McpServer = class {
 				if (isInputRequiredResult(result)) return result;
 				return this.server.projectCallToolResult(result, tool.outputSchemaJson);
 			} catch (error) {
-				if (error instanceof ProtocolError && error.code === src_BHSMhZ_W_ProtocolErrorCode.UrlElicitationRequired) throw error;
+				if (error instanceof ProtocolError && error.code === src_Cqbh3MYc_ProtocolErrorCode.UrlElicitationRequired) throw error;
 				return this.createToolError(error instanceof Error ? error.message : String(error));
 			}
 		});
@@ -28353,9 +28449,10 @@ var mcp_DYuW2ZSs_McpServer = class {
 	* Validates tool input arguments against the tool's input schema.
 	*/
 	async validateToolInput(tool, args, toolName) {
+		if (this._maxToolInputElements !== void 0 && toolInputElementCount(args, this._maxToolInputElements) > this._maxToolInputElements) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Invalid arguments for tool ${toolName}: arguments contain more than the maximum of ${this._maxToolInputElements} elements`);
 		if (!tool.inputSchema) return;
 		const parseResult = await validateStandardSchema(tool.inputSchema, args ?? {});
-		if (!parseResult.success) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Input validation error: Invalid arguments for tool ${toolName}: ${parseResult.error}`);
+		if (!parseResult.success) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Input validation error: Invalid arguments for tool ${toolName}: ${parseResult.error}`);
 		return parseResult.data;
 	}
 	/**
@@ -28365,9 +28462,9 @@ var mcp_DYuW2ZSs_McpServer = class {
 		if (!tool.outputSchema) return;
 		if (isInputRequiredResult(result)) return;
 		if (result.isError) return;
-		if (result.structuredContent === void 0) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Output validation error: Tool ${toolName} has an output schema but no structured content was provided`);
+		if (result.structuredContent === void 0) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Output validation error: Tool ${toolName} has an output schema but no structured content was provided`);
 		const parseResult = await validateStandardSchema(tool.outputSchema, result.structuredContent);
-		if (!parseResult.success) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Output validation error: Invalid structured content for tool ${toolName}: ${parseResult.error}`);
+		if (!parseResult.success) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Output validation error: Invalid structured content for tool ${toolName}: ${parseResult.error}`);
 	}
 	/**
 	* Executes a tool handler.
@@ -28388,15 +28485,15 @@ var mcp_DYuW2ZSs_McpServer = class {
 				case "ref/resource":
 					assertCompleteRequestResourceTemplate(request);
 					return this.handleResourceCompletion(request, request.params.ref);
-				default: throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Invalid completion reference: ${request.params.ref}`);
+				default: throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Invalid completion reference: ${request.params.ref}`);
 			}
 		});
 		this._completionHandlerInitialized = true;
 	}
 	async handlePromptCompletion(request, ref) {
 		const prompt = this._registeredPrompts[ref.name];
-		if (!prompt) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Prompt ${ref.name} not found`);
-		if (!prompt.enabled) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Prompt ${ref.name} disabled`);
+		if (!prompt) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Prompt ${ref.name} not found`);
+		if (!prompt.enabled) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Prompt ${ref.name} disabled`);
 		if (!prompt.argsSchema) return EMPTY_COMPLETION_RESULT;
 		const field = unwrapOptionalSchema(getSchemaShape(prompt.argsSchema)?.[request.params.argument.name]);
 		if (!isCompletable(field)) return EMPTY_COMPLETION_RESULT;
@@ -28408,7 +28505,7 @@ var mcp_DYuW2ZSs_McpServer = class {
 		const template = Object.values(this._registeredResourceTemplates).find((t) => t.resourceTemplate.uriTemplate.toString() === ref.uri);
 		if (!template) {
 			if (this._registeredResources[ref.uri]) return EMPTY_COMPLETION_RESULT;
-			throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Resource template ${request.params.ref.uri} not found`);
+			throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Resource template ${request.params.ref.uri} not found`);
 		}
 		const completer = template.resourceTemplate.completeCallback(request.params.argument.name);
 		if (!completer) return EMPTY_COMPLETION_RESULT;
@@ -28450,20 +28547,20 @@ var mcp_DYuW2ZSs_McpServer = class {
 			try {
 				uri = new URL(request.params.uri);
 			} catch {
-				throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Resource URI ${request.params.uri} is invalid`, {
+				throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Resource URI ${request.params.uri} is invalid`, {
 					uri: request.params.uri,
 					reason: "invalid_uri"
 				});
 			}
 			const resource = this._registeredResources[uri.toString()];
 			if (resource) {
-				if (!resource.enabled) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Resource ${uri} disabled`);
+				if (!resource.enabled) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Resource ${uri} disabled`);
 				return attachCacheHintFallback(await resource.readCallback(uri, ctx), resource.cacheHint);
 			}
 			for (const template of Object.values(this._registeredResourceTemplates)) {
 				const variables = template.resourceTemplate.uriTemplate.match(uri.toString());
 				if (variables) {
-					if (!template.enabled) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Resource template ${template.resourceTemplate.uriTemplate} disabled`);
+					if (!template.enabled) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Resource template ${template.resourceTemplate.uriTemplate} disabled`);
 					return attachCacheHintFallback(await template.readCallback(uri, variables, ctx), template.cacheHint);
 				}
 			}
@@ -28489,8 +28586,8 @@ var mcp_DYuW2ZSs_McpServer = class {
 		}) }));
 		this.server.setRequestHandler("prompts/get", async (request, ctx) => {
 			const prompt = this._registeredPrompts[request.params.name];
-			if (!prompt) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Prompt ${request.params.name} not found`);
-			if (!prompt.enabled) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Prompt ${request.params.name} disabled`);
+			if (!prompt) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Prompt ${request.params.name} not found`);
+			if (!prompt.enabled) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Prompt ${request.params.name} disabled`);
 			return prompt.handler(request.params.arguments, ctx);
 		});
 		this._promptHandlersInitialized = true;
@@ -28626,19 +28723,19 @@ var mcp_DYuW2ZSs_McpServer = class {
 	}
 	_createRegisteredTool(name, title, description, inputSchema, outputSchema, annotations, icons, execution, scopeChallenge, _meta, handler) {
 		validateAndWarnToolName(name);
-		if (inputSchema !== void 0) try {
-			const json = standardSchemaToJsonSchema(inputSchema, "input");
-			this._toolInputSchemaJson[name] = json;
-			const scan = src_BHSMhZ_W_scanXMcpHeaderDeclarations(json);
-			if (!scan.valid) console.warn(`[mcp-sdk] tool '${name}' carries an invalid x-mcp-header declaration and will be excluded by conforming Streamable HTTP clients: ${scan.reason}`);
-		} catch {}
 		let currentHandler = handler;
+		let outputSchemaJson;
 		const registeredTool = {
 			title,
 			description,
 			inputSchema,
 			outputSchema,
-			outputSchemaJson: convertOutputSchemaJson(outputSchema),
+			get outputSchemaJson() {
+				return outputSchemaJson ??= convertOutputSchemaJson(registeredTool.outputSchema);
+			},
+			set outputSchemaJson(value) {
+				outputSchemaJson = value;
+			},
 			annotations,
 			icons,
 			execution,
@@ -28799,6 +28896,13 @@ const EMPTY_OBJECT_JSON_SCHEMA = {
 	type: "object",
 	properties: {}
 };
+/** Converts a tool's `inputSchema` for `tools/list` and warns on an invalid SEP-2243 `x-mcp-header` declaration. */
+function convertListedInputSchema(name, inputSchema) {
+	const json = standardSchemaToJsonSchema(inputSchema, "input");
+	const scan = src_Cqbh3MYc_scanXMcpHeaderDeclarations(json);
+	if (!scan.valid) console.warn(`[mcp-sdk] tool '${name}' carries an invalid x-mcp-header declaration and will be excluded by conforming Streamable HTTP clients: ${scan.reason}`);
+	return json;
+}
 /**
 * Convert a registered `outputSchema` to JSON Schema, memoised on {@link RegisteredTool.outputSchemaJson}
 * so `tools/call` passes the SAME advertised schema to the wire codec's `projectCallToolResult` that
@@ -28821,8 +28925,8 @@ function createPromptHandler(name, argsSchema, callback) {
 	if (argsSchema) {
 		const typedCallback = callback;
 		return async (args, ctx) => {
-			const parseResult = await validateStandardSchema(argsSchema, args);
-			if (!parseResult.success) throw new ProtocolError(src_BHSMhZ_W_ProtocolErrorCode.InvalidParams, `Invalid arguments for prompt ${name}: ${parseResult.error}`);
+			const parseResult = await validateStandardSchema(argsSchema, args ?? {});
+			if (!parseResult.success) throw new ProtocolError(src_Cqbh3MYc_ProtocolErrorCode.InvalidParams, `Invalid arguments for prompt ${name}: ${parseResult.error}`);
 			return typedCallback(parseResult.data, ctx);
 		};
 	} else {
@@ -28860,8 +28964,8 @@ function unwrapOptionalSchema(schema) {
 
 //#endregion
 
-//# sourceMappingURL=mcp-DYuW2ZSs.mjs.map
-;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.2.0/node_modules/@modelcontextprotocol/server/dist/stdio.mjs
+//# sourceMappingURL=mcp-DIH4cS6P.mjs.map
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.3.1/node_modules/@modelcontextprotocol/server/dist/stdio.mjs
 
 
 
@@ -29491,7 +29595,7 @@ const external_node_util_namespaceObject = __WEBPACK_EXTERNAL_createRequire(impo
 const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs/promises");
 ;// CONCATENATED MODULE: external "node:os"
 const external_node_os_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:os");
-;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.2.0/node_modules/@modelcontextprotocol/server/dist/index.mjs
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@modelcontextprotocol+server@2.3.1/node_modules/@modelcontextprotocol/server/dist/index.mjs
 
 
 
@@ -29833,6 +29937,10 @@ async function readRequestBody(request, maxBytes = DEFAULT_MAX_REQUEST_BODY_SIZE
 * @example Hono.js
 * ```ts source="./streamableHttp.examples.ts#WebStandardStreamableHTTPServerTransport_hono"
 * app.all('/mcp', async c => {
+*     // Stateless example: create a server and a transport per request.
+*     const server = new McpServer({ name: 'my-server', version: '1.0.0' });
+*     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+*     await server.connect(transport);
 *     return transport.handleRequest(c.req.raw);
 * });
 * ```
@@ -29841,6 +29949,10 @@ async function readRequestBody(request, maxBytes = DEFAULT_MAX_REQUEST_BODY_SIZE
 * ```ts source="./streamableHttp.examples.ts#WebStandardStreamableHTTPServerTransport_workers"
 * const worker = {
 *     async fetch(request: Request): Promise<Response> {
+*         // Stateless example: create a server and a transport per request.
+*         const server = new McpServer({ name: 'my-server', version: '1.0.0' });
+*         const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+*         await server.connect(transport);
 *         return transport.handleRequest(request);
 *     }
 * };
@@ -29849,6 +29961,7 @@ async function readRequestBody(request, maxBytes = DEFAULT_MAX_REQUEST_BODY_SIZE
 var WebStandardStreamableHTTPServerTransport = class {
 	sessionIdGenerator;
 	_started = false;
+	_hasHandledRequest = false;
 	_closed = false;
 	_streamMapping = /* @__PURE__ */ new Map();
 	_requestToStreamMapping = /* @__PURE__ */ new Map();
@@ -29970,6 +30083,8 @@ var WebStandardStreamableHTTPServerTransport = class {
 	*/
 	async handleRequest(req, options) {
 		if (this._closed) return this.createJsonErrorResponse(404, -32001, "Session not found");
+		if (!this.sessionIdGenerator && this._hasHandledRequest) throw new Error("Stateless transport cannot be reused across requests. Create a new transport per request.");
+		this._hasHandledRequest = true;
 		const validationError = this.validateRequestHeaders(req);
 		if (validationError) return validationError;
 		switch (req.method) {
@@ -30521,6 +30636,10 @@ function dist_toError(value) {
 function internalServerErrorResponse(id = null) {
 	return jsonRpcErrorResponse(500, -32603, "Internal server error", void 0, id);
 }
+/** Throws when the factory returned an instance that is still connected to another exchange. */
+function assertNotServing(server) {
+	if (server.transport !== void 0) throw new Error("The factory returned an instance that is still serving another request. Return a new instance for each request.");
+}
 /**
 * The entry's default legacy serving (`legacy: 'stateless'`): per-request
 * stateless serving of 2025-era traffic using the same factory as the modern
@@ -30859,6 +30978,7 @@ function createMcpHandler(factory, options = {}) {
 			requestInfo: request
 		});
 		const server = product instanceof McpServer ? product.server : product;
+		assertNotServing(server);
 		if (route.messageKind === "request" && route.message.method === "subscriptions/listen") {
 			const capabilities = server.getCapabilities();
 			const serverInfo = serverIdentityOf(server);
@@ -30892,6 +31012,7 @@ function createMcpHandler(factory, options = {}) {
 			reportError(dist_toError(error));
 			return internalServerErrorResponse(route.message.id);
 		}
+		assertNotServing(server);
 		setNegotiatedProtocolVersion(server, claimedRevision);
 		installModernOnlyHandlers(server, SUPPORTED_MODERN_PROTOCOL_VERSIONS);
 		if (meta !== void 0) seedClientIdentityFromEnvelope(server, {
@@ -31063,14 +31184,22 @@ function hostHeaderValidationResponse(req, allowedHostnames) {
 *   and only browser-originated requests carry the header this check defends against.
 * - Allowlist items are hostnames only (no scheme, no port), the same convention as
 *   `validateHostHeader`. For IPv6, include brackets (e.g. `[::1]`).
+* - A browser extension's origin carries its extension ID as the hostname; list the
+*   ID to allow one extension. An allowlist item of the form `<scheme>://*`
+*   (lowercase, e.g. `moz-extension://*`) allows every origin of that scheme, which
+*   Firefox needs because its extension IDs differ on every install.
+*   `http://*` and `https://*` are not honoured: list websites by hostname.
 * - Any present value that cannot be parsed as an origin URL — including the literal
 *   `null` origin browsers send for opaque contexts — is rejected (deny on failure).
 */
 function validateOriginHeader(originHeader, allowedOriginHostnames) {
 	if (originHeader === null || originHeader === void 0 || originHeader === "") return { ok: true };
 	let hostname;
+	let scheme;
 	try {
-		hostname = new URL(originHeader).hostname;
+		const url = new URL(originHeader);
+		hostname = url.hostname;
+		scheme = url.protocol;
 	} catch {
 		return {
 			ok: false,
@@ -31085,7 +31214,7 @@ function validateOriginHeader(originHeader, allowedOriginHostnames) {
 		message: `Invalid Origin header: ${originHeader}`,
 		originHeader
 	};
-	if (!allowedOriginHostnames.includes(hostname)) return {
+	if (!(scheme !== "http:" && scheme !== "https:" && allowedOriginHostnames.includes(`${scheme}//*`)) && !allowedOriginHostnames.includes(hostname)) return {
 		ok: false,
 		errorCode: "invalid_origin",
 		message: `Invalid Origin: ${hostname}`,
@@ -32055,7 +32184,7 @@ function okResult(data) {
     };
 }
 function createServer(config) {
-    const server = new mcp_DYuW2ZSs_McpServer({ name: 'agent-readiness', version: TOOL_VERSION }, {
+    const server = new mcp_DIH4cS6P_McpServer({ name: 'agent-readiness', version: TOOL_VERSION }, {
         instructions: 'Deterministic, read-only audits of local repositories for AI coding agents. ' +
             'Report scores exactly as returned. ' +
             UNTRUSTED_NOTE,
