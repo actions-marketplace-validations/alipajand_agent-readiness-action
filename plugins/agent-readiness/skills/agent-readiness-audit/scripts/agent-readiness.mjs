@@ -11086,7 +11086,7 @@ function jsonError_describeJsonError(raw, err) {
     return `is not valid JSON (line ${before.length}, column ${before[before.length - 1].length + 1})`;
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/util.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js
 
 // functions
 function assertEqual(val) {
@@ -11639,6 +11639,20 @@ function unwrapMessage(message) {
     return typeof message === "string" ? message : message?.message;
 }
 /* A check holds no link back to the schema it is attached to — the same check instance is shared by every clone of that schema — so the owner is stamped onto the issues a check just raised, at the only point where both are in scope. Runs on the failure path only; `start` is the issue count from before the check ran. */
+/** The leading size checks of `defChecks` that set an upper bound, each paired with it. */
+function sizeCaps(defChecks) {
+    const caps = [];
+    for (const ch of defChecks ?? []) {
+        const d = ch._zod.def;
+        // a later check may rewrite the value
+        if (!/_(length|size)$|_equals$/.test(d.check))
+            break;
+        const max = d.maximum ?? d.length ?? d.size;
+        if (max >= 0)
+            caps.push([max, ch]);
+    }
+    return caps;
+}
 function attachSchema(issues, start, inst) {
     var _a;
     for (let i = start; i < issues.length; i++) {
@@ -11947,7 +11961,7 @@ function constantCatch(value) {
     return fn;
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/core.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/core.js
 var _a;
 
 /** A special constant with type `never` */
@@ -12090,7 +12104,7 @@ function config(newConfig) {
     return globalConfig;
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/memoizer.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/memoizer.js
 
 class $ZodCyclicError extends Error {
     constructor() {
@@ -12403,7 +12417,7 @@ function isBackEdge(ctx, value) {
     return backEdges !== undefined && isRef(value) && backEdges.has(value);
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/regexes.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js
 
 /**
  * @deprecated CUID v1 is deprecated by its authors due to information leakage
@@ -12561,7 +12575,7 @@ const sha512_hex = /^[0-9a-fA-F]{128}$/;
 const sha512_base64 = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64(86, "==")));
 const sha512_base64url = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64url(86)));
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/checks.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/checks.js
 // import { $ZodType } from "./schemas.js";
 
 
@@ -13079,7 +13093,7 @@ const $ZodCheckOverwrite = /*@__PURE__*/ $constructor("$ZodCheckOverwrite", (ins
     };
 });
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/doc.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/doc.js
 class Doc {
     constructor(args = [], closed = {}) {
         this.content = [];
@@ -13119,14 +13133,14 @@ class Doc {
     }
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/versions.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/versions.js
 const version = {
     major: 4,
     minor: 6,
-    patch: 5,
+    patch: 7,
 };
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/schemas.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/schemas.js
 
 
 
@@ -13945,6 +13959,33 @@ const $ZodDate = /*@__PURE__*/ $constructor("$ZodDate", (inst, def) => {
         return payload;
     };
 });
+// an oversized container fails its leading size checks before any element is parsed
+function capSize(inst, size) {
+    const caps = sizeCaps(inst._zod.def.checks);
+    if (!caps.length)
+        return;
+    const cap = Math.min(...caps.map((c) => c[0]));
+    const parse = inst._zod.parse;
+    inst._zod.parse = (payload, ctx) => {
+        const n = size(payload.value);
+        if (n > cap && !ctx?.skipChecks && ctx?.direction !== "backward") {
+            for (const [max, ch] of sizeCaps(inst._zod.def.checks)) {
+                if (n > max && ch._zod.def.when(payload)) {
+                    const start = payload.issues.length;
+                    ch._zod.check(payload);
+                    // the value is still the raw input, so no later check may read it
+                    payload.issues[start].continue = false;
+                    attachSchema(payload.issues, start, inst);
+                    return payload;
+                }
+            }
+        }
+        return parse(payload, ctx);
+    };
+}
+const arraySize = (input) => (Array.isArray(input) ? input.length : -1);
+const mapSize = (input) => (input instanceof Map ? input.size : -1);
+const setSize = (input) => (input instanceof Set ? input.size : -1);
 function handleArrayResult(result, final, index) {
     if (result.issues.length) {
         final.issues.push(...prefixIssues(index, result.issues));
@@ -13990,6 +14031,7 @@ const $ZodArray = /*@__PURE__*/ $constructor("$ZodArray", (inst, def) => {
         }
         return payload; //handleArrayResultsAsync(parseResults, final);
     };
+    capSize(inst, arraySize);
 });
 function handlePropertyResult(result, final, key, input, optin, optout) {
     const isPresent = key in input;
@@ -15027,6 +15069,7 @@ const $ZodMap = /*@__PURE__*/ (/* unused pure expression or super */ null && (co
             return Promise.all(proms).then(() => payload);
         return payload;
     };
+    capSize(inst, mapSize);
 })));
 function handleMapResult(keyResult, valueResult, final, key, input, inst, ctx) {
     if (keyResult.issues.length) {
@@ -15096,6 +15139,7 @@ const $ZodSet = /*@__PURE__*/ (/* unused pure expression or super */ null && (co
             return Promise.all(proms).then(() => payload);
         return payload;
     };
+    capSize(inst, setSize);
 })));
 function handleSetResult(result, final) {
     if (result.issues.length) {
@@ -15734,7 +15778,7 @@ function handleRefineResult(result, payload, input, inst) {
     }
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/registries.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/registries.js
 var registries_a;
 const $output = /*@__PURE__*/ (/* unused pure expression or super */ null && (Symbol("ZodOutput")));
 const $input = /*@__PURE__*/ (/* unused pure expression or super */ null && (Symbol("ZodInput")));
@@ -15787,7 +15831,7 @@ function registry() {
 (registries_a = globalThis).__zod_globalRegistry ?? (registries_a.__zod_globalRegistry = registry());
 const globalRegistry = globalThis.__zod_globalRegistry;
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/api.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/api.js
 
 
 
@@ -16892,7 +16936,7 @@ function _stringFormat(Class, format, fnOrRegex, _params = {}) {
     return inst;
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/to-json-schema.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/to-json-schema.js
 
 
 function assignProps(target, ...sources) {
@@ -17545,7 +17589,7 @@ const createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params)
     return to_json_schema_finalize(ctx, schema);
 };
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/json-schema-processors.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/json-schema-processors.js
 
 
 
@@ -18390,7 +18434,7 @@ function toJSONSchema(input, params) {
     return finalize(ctx, input);
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/en.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/locales/en.js
 
 const error = () => {
     const Sizable = {
@@ -18517,7 +18561,7 @@ const error = () => {
     };
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/errors.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/errors.js
 
 
 /* Computing the message eagerly is expensive (pretty-printed JSON of all
@@ -18786,7 +18830,7 @@ function prettifyError(error) {
     return lines.join("\n");
 }
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/core/parse.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/parse.js
 
 
 
@@ -18963,7 +19007,7 @@ const _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
 };
 const safeDecodeAsync = /* @__PURE__*/ _safeDecodeAsync($ZodRealError);
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/errors.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/errors.js
 
 
 
@@ -19022,7 +19066,7 @@ const ZodRealError = /*@__PURE__*/ $constructor("ZodError", errors_initializer, 
 // /** @deprecated Use `z.core.$ZodErrorMapCtx` instead. */
 // export type ErrorMapCtx = core.$ZodErrorMapCtx;
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/parse.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/parse.js
 
 
 const classic_parse_parse = /* @__PURE__ */ _parse(ZodRealError);
@@ -19040,7 +19084,7 @@ const parse_safeDecode = /* @__PURE__ */ _safeDecode(ZodRealError);
 const parse_safeEncodeAsync = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
 const parse_safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
-;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/schemas.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/schemas.js
 
 
 
