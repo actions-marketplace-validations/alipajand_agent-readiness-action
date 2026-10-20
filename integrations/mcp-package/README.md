@@ -78,6 +78,10 @@ Options: `--root <dir>` (repeatable), `--timeout <seconds>` (default 120), `--ma
   and the host may send them, or files it reads itself, to its model provider. Credential masking
   covers the server's results only.
 
+## Listings
+
+Listed on [MCPRush](https://mcprush.com/alipajand/agent-readiness-mcp).
+
 ## License
 
 MIT. Bundled third-party licenses are in `dist/THIRD-PARTY-LICENSES.txt` and

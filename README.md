@@ -1,8 +1,6 @@
 # agent-readiness-action
 
 [![version](https://img.shields.io/github/v/release/alipajand/agent-readiness-action?label=version&color=blue)](https://github.com/alipajand/agent-readiness-action/releases)
-[![tests](https://img.shields.io/badge/tests-112%20passing-brightgreen)](https://github.com/alipajand/agent-readiness-action/actions/workflows/ci.yml)
-[![coverage](https://img.shields.io/badge/coverage-55%25-yellow)](https://github.com/alipajand/agent-readiness-action/actions/workflows/ci.yml)
 [![CI](https://github.com/alipajand/agent-readiness-action/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/alipajand/agent-readiness-action/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/alipajand/agent-readiness-action/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/alipajand/agent-readiness-action/actions/workflows/codeql.yml)
 [![license](https://img.shields.io/github/license/alipajand/agent-readiness-action?color=blue)](LICENSE)
@@ -308,7 +306,8 @@ offline; the agent that runs it may send the results to its model provider
 - **Claude Code and Cursor plugin** `agent-readiness`:
   [docs/integrations/PLUGINS.md](docs/integrations/PLUGINS.md)
 - **Local MCP server** `@alipajand/agent-readiness-mcp`:
-  [integrations/mcp-package/README.md](integrations/mcp-package/README.md)
+  [integrations/mcp-package/README.md](integrations/mcp-package/README.md); listed on
+  [MCPRush](https://mcprush.com/alipajand/agent-readiness-mcp)
 
 See [docs/distribution/README.md](docs/distribution/README.md) for what is published where.
 
