@@ -6,6 +6,11 @@ This project follows [Semantic Versioning](https://semver.org/) and the [Keep a 
 
 ## [Unreleased]
 
+### Security
+
+- Raise the `undici` override from 6.29.0 to 6.29.1 and rebuild `dist/`. `undici` is bundled into the action through `@actions/http-client`, and 6.29.1 fixes two denial-of-service advisories (unbounded memory growth, and an unhandled error on excessive input).
+- Update development dependencies flagged by `pnpm audit`: `vitest` and `@vitest/coverage-v8` 4.1.12, `vite` 8.3.5 as a direct development dependency (replacing the transitive 7.3.5), `nanoid` 3.3.20, and `fast-uri` 3.1.9. None of these ship in `dist/` or the integration bundles.
+
 ## [1.2.0] - 2026-10-12
 
 ### Added
